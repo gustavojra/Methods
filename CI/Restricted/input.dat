@@ -7,7 +7,7 @@ molecule mol {
     0 1
     O
     H 1 1.0
-    H 1 1.0 2 104.52
+    H 1 1.0 2 104.5
     symmetry c1
 }
 
@@ -21,4 +21,4 @@ set {
 
 x = CAS(mol)
 
-x.CAS('aaaaaaa' + 6*'u')
+x.CAS('aaaaaaaauuuuu',par=True)

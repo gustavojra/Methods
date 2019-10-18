@@ -7,19 +7,15 @@ import sys
 def H_dif0(det1, molint1, molint2):
     alphas = det1.alpha_list()
     betas = det1.beta_list()
-    one = np.einsum('mm,m->', molint1, alphas) + np.einsum('mm,m->', molint1, betas)
-    
     # Compute J for all combinations of m n being alpha or beta
-    x1 = np.einsum('mmnn, m, n', molint2, alphas, alphas, optimize = 'optimal')
-    x2 = np.einsum('mmnn, m, n', molint2, betas, betas, optimize = 'optimal')
-    x3 = np.einsum('mmnn, m, n', molint2, alphas, betas, optimize = 'optimal')
-    x4 = np.einsum('mmnn, m, n', molint2, betas, alphas, optimize = 'optimal')
-    J = x1 + x2 + x3 + x4
+    JK  = np.einsum('mmnn, m, n', molint2, alphas, alphas, optimize = 'optimal')\
+        + np.einsum('mmnn, m, n', molint2, betas, betas, optimize = 'optimal')  \
+        + np.einsum('mmnn, m, n', molint2, alphas, betas, optimize = 'optimal') \
+        + np.einsum('mmnn, m, n', molint2, betas, alphas, optimize = 'optimal')
     # For K m and n have to have the same spin, thus only two cases are considered
-    x1 = np.einsum('mnnm, m, n', molint2, alphas, alphas, optimize = 'optimal')
-    x2 = np.einsum('mnnm, m, n', molint2, betas, betas, optimize = 'optimal')
-    K = x1 + x2
-    return 0.5 * (J - K) + one
+    JK -= np.einsum('mnnm, m, n', molint2, alphas, alphas, optimize = 'optimal')
+    JK -= np.einsum('mnnm, m, n', molint2, betas, betas, optimize = 'optimal')
+    return 0.5 * JK + np.einsum('mm,m->', molint1, alphas) + np.einsum('mm,m->', molint1, betas)
     
     
 def H_dif4(det1, det2, molint1, molint2):
@@ -78,21 +74,18 @@ def get_H(dets, molint1, molint2, v = False, t = False):
             print("Completed. Time needed: {}".format(time.time() - t0))
         return H
 
-class H_generator:
-
-    def __init__(self, molint1, molint2, dets):
-        self.one = molint1
-        self.two = molint2
-        self.dets = dets
-
-    def gen(i,j):
-        dif = self.dets[i] - self.dets[j]
-        if dif > 4:
-            return 0
-        elif dif == 4:
-           H_dif4(self.dets[i], self.dets[y], self.one, self.two) 
-        elif dif == 2:
-           H_dif2(self.dets[i], self.dets[y], self.one, self.two) 
-        elif dif == 0:
-           H_dif0(self.dets[i], self.dets[y], self.one, self.two) 
+def Hgen(inp):
+    det1 = inp[0]
+    det2 = inp[1]
+    one  = inp[2]
+    two  = inp[3] 
+    dif = det1 - det2
+    if dif > 4:
+        return 0
+    elif dif == 4:
+       return H_dif4(det1, det2, one, two) 
+    elif dif == 2:
+       return H_dif2(det1, det2, one, two) 
+    elif dif == 0:
+       return H_dif0(det1, one, two) 
 

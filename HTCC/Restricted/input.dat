@@ -6,8 +6,8 @@ from HTCCSD import HTCCSD
 molecule mol {
     0 1
     He 
-    He 1 1.0
-    He 1 1.0 2 120.0
+    He 1 2.0
+    He 1 2.0 2 120.0
     symmetry c1
 }
 

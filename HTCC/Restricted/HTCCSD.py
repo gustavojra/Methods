@@ -289,14 +289,40 @@ class HTCCSD:
 
         #self.T1, self.T2 = T1new, T2new
 
-    def printcast2(self):
+    # PRINT FUNCTIONS FOR DEBUGGING
+
+    def printcast1(self,w=False):
+        out = ''
+        for i in range(self.ndocc):
+            for a in range(self.nvir):
+                x = self.CAS_T1[i,a]
+                if abs(x) > 1e-6:
+                    out += '{}a -> {}a {:< 5.6f}'.format(i+1,1+a+self.ndocc,x)
+                    out += '\n'
+        if w:
+            fil = open('t1amps.dat','w') 
+            fil.write(out)
+            fil.close()
+        else:
+            print(out)
+
+    def printcast2(self,w=False):
+        out = ''
         for i in range(self.ndocc):
             for j in range(self.ndocc):
                     for a in range(self.nvir):
                         for b in range(self.nvir):
                                 x = self.CAS_T2[i,j,a,b]
                                 if abs(x) > 1e-6:
-                                    print('{}a {}b -> {}a {}b {:< 5.6f}'.format(i+1,j+1,1+a+self.ndocc,1+b+self.ndocc,x))
+                                    out += '{}a {}b -> {}a {}b {:< 5.6f}'.format(i+1,j+1,1+a+self.ndocc,1+b+self.ndocc,x)
+                                    out += '\n'
+        if w:
+            fil = open('t2amps.dat','w') 
+            fil.write(out)
+            fil.close()
+        else:
+            print(out)
+
     def printcast3(self,w=False):
         out = ''
         for i in range(self.ndocc):
@@ -315,6 +341,27 @@ class HTCCSD:
                                     out += '\n'
         if w:
             fil = open('t3amps.dat','w') 
+            fil.write(out)
+            fil.close()
+        else:
+            print(out)
+
+    def printcast4(self,w=False):
+        out = ''
+        for i in range(self.ndocc):
+            for j in range(self.ndocc):
+                for k in range(self.ndocc):
+                    for a in range(self.nvir):
+                        for b in range(self.nvir):
+                            for c in range(self.nvir):
+                                for d in range(self.nvir):
+                                    for l in range(self.ndocc):
+                                        x = self.CAS_T4abaa[i,j,k,l,a,b,c,d]
+                                        if abs(x) > 1e-6:
+                                            out += '{}a {}b {}a {}a -> {}a {}b {}a {}a {:< 5.6f}'.format(i+1,j+1,k+1,l+1,1+a+self.ndocc,1+b+self.ndocc,1+c+self.ndocc,1+d+self.ndocc,x)
+                                            out += '\n'
+        if w:
+            fil = open('t4amps.dat','w') 
             fil.write(out)
             fil.close()
         else:
@@ -774,10 +821,10 @@ class HTCCSD:
         
         # Generate initial T1 and T2 amplitudes
 
-        self.T1 = np.zeros([self.ndocc, self.nvir])
+        #self.T1 = np.zeros([self.ndocc, self.nvir])
         #self.T2  = np.zeros([self.ndocc, self.ndocc, self.nvir, self.nvir])
         
-        self.cc_energy()
+        #self.cc_energy()
 
         print('CC Energy from CAS Amplitudes: {:<5.10f}'.format(self.Ecc+self.Escf))
 
@@ -787,7 +834,11 @@ class HTCCSD:
         LIM = 10**(-CC_CONV)
         ite = 0
         
+        print('C0: {}'.format(C0))
+        self.printcast1(w=True)
+        self.printcast2(w=True)
         self.printcast3(w=True)
+        self.printcast4(w=True)
         
        # while self.r2 > LIM or self.r1 > LIM:
        #     ite += 1
