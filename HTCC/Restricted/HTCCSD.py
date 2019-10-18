@@ -226,6 +226,100 @@ class HTCCSD:
     
         #self.T1, self.T2 = T1new, T2new
 
+    def T1_Update(self, EINSUMOPT='optimal'):
+    
+        # Compute CCSD Amplitudes. Only the T1 (alpha -> alpha) are considered since the beta -> beta case yields the same amplitude and the mixed case is zero.
+        # For T2 amplitudes we consider the case (alpha -> alpha, beta -> beta) the other spin cases can be writen in terms of this one.
+        # Equations from J. Chem. Phys. 86, 2881 (1987): G. E. Scuseria et al.
+        # CC Intermediate arrays
+    
+        o = slice(0, self.ndocc)
+        v = slice(self.ndocc, self.nbf)
+
+        tau = self.T2 + np.einsum('ia,jb->ijab', self.T1, self.T1,optimize=EINSUMOPT)
+        Te = 0.5*self.T2 + np.einsum('ia,jb->ijab', self.T1, self.T1,optimize=EINSUMOPT)
+    
+        A2l = np.einsum('uvij,ijpg->uvpg', self.Vint[o,o,o,o], tau,                                    optimize=EINSUMOPT)
+        B2l = np.einsum('abpg,uvab->uvpg', self.Vint[v,v,v,v], tau,                                    optimize=EINSUMOPT)
+        C1  = np.einsum('uaip,ia->uip',    self.Vint[o,v,o,v], self.T1,                                optimize=EINSUMOPT) 
+        C2  = np.einsum('aupi,viga->pvug', self.Vint[v,o,v,o], self.T2,                                optimize=EINSUMOPT)
+        C2l = np.einsum('iaug,ivpa->pvug', self.Vint[o,v,o,v], tau,                                    optimize=EINSUMOPT)
+        D1  = np.einsum('uapi,va->uvpi',   self.Vint[o,v,v,o], self.T1,                                optimize=EINSUMOPT)
+        D2l = np.einsum('abij,uvab->uvij', self.Vint[v,v,o,o], tau,                                    optimize=EINSUMOPT)
+        Ds2l= np.einsum('acij,ijpb->acpb', self.Vint[v,v,o,o], tau,                                    optimize=EINSUMOPT)
+        D2a = np.einsum('baji,vjgb->avig', self.Vint[v,v,o,o], 2*self.T2 - self.T2.transpose(0,1,3,2), optimize=EINSUMOPT)
+        D2b = np.einsum('baij,vjgb->avig', self.Vint[v,v,o,o], self.T2,                                optimize=EINSUMOPT)
+        D2c = np.einsum('baij,vjbg->avig', self.Vint[v,v,o,o], self.T2,                                optimize=EINSUMOPT)
+        Es1 = np.einsum('uvpi,ig->uvpg',   self.Vint[o,o,v,o], self.T1,                                optimize=EINSUMOPT)
+        E1  = np.einsum('uaij,va->uvij',   self.Vint[o,v,o,o], self.T1,                                optimize=EINSUMOPT)
+        E2a = np.einsum('buji,vjgb->uvig', self.Vint[v,o,o,o], 2*self.T2 - self.T2.transpose(0,1,3,2), optimize=EINSUMOPT)
+        E2b = np.einsum('buij,vjgb->uvig', self.Vint[v,o,o,o], self.T2,                                optimize=EINSUMOPT)
+        E2c = np.einsum('buij,vjbg->uvig', self.Vint[v,o,o,o], self.T2,                                optimize=EINSUMOPT)
+        F11 = np.einsum('bapi,va->bvpi',   self.Vint[v,v,v,o], self.T1,                                optimize=EINSUMOPT)
+        F12 = np.einsum('baip,va->bvip',   self.Vint[v,v,o,v], self.T1,                                optimize=EINSUMOPT)
+        Fs1 = np.einsum('acpi,ib->acpb',   self.Vint[v,v,v,o], self.T1,                                optimize=EINSUMOPT)
+        F2a = np.einsum('abpi,uiab->aup',  self.Vint[v,v,v,o], 2*self.T2 - self.T2.transpose(0,1,3,2), optimize=EINSUMOPT) 
+        F2l = np.einsum('abpi,uvab->uvpi', self.Vint[v,v,v,o], tau,                                    optimize=EINSUMOPT)
+    
+        X = E1 + D2l
+
+        giu = np.einsum('ujij->ui', 2*X - X.transpose(0,1,3,2), optimize=EINSUMOPT)
+        
+        X = Fs1 - Ds2l
+        gap = np.einsum('abpb->ap', 2*X - X.transpose(1,0,2,3), optimize=EINSUMOPT)
+    
+        # T1 Amplitudes update
+        
+        T1new =    np.einsum('ui,ip->up',      giu, self.T1,                                   optimize=EINSUMOPT)
+        T1new -=   np.einsum('ap,ua->up',      gap, self.T1,                                   optimize=EINSUMOPT)
+        T1new -=   np.einsum('juai,ja,ip->up', 2*D1 - D1.transpose(3,1,2,0), self.T1, self.T1, optimize=EINSUMOPT)
+        T1new -=   np.einsum('auip,ia->up',    2*(D2a - D2b) + D2c, self.T1,                   optimize=EINSUMOPT)
+        T1new -=   np.einsum('aup->up',        F2a,                                            optimize=EINSUMOPT)
+        T1new +=   np.einsum('uiip->up',       1.0/2.0*(E2a - E2b) + E2c,                      optimize=EINSUMOPT)
+        T1new +=   np.einsum('uip->up',        C1,                                             optimize=EINSUMOPT)
+        T1new -= 2*np.einsum('uipi->up',       D1,                                             optimize=EINSUMOPT)
+    
+        #T1new += self.T3onT1
+
+        T1new = np.einsum('up,up->up', T1new, self.d, optimize=EINSUMOPT)
+        
+        self.r1 = np.sum(np.abs(T1new - self.T1))
+
+        self.T1 = T1new
+
+        #self.T1, self.T2 = T1new, T2new
+
+    def printcast2(self):
+        for i in range(self.ndocc):
+            for j in range(self.ndocc):
+                    for a in range(self.nvir):
+                        for b in range(self.nvir):
+                                x = self.CAS_T2[i,j,a,b]
+                                if abs(x) > 1e-6:
+                                    print('{}a {}b -> {}a {}b {:< 5.6f}'.format(i+1,j+1,1+a+self.ndocc,1+b+self.ndocc,x))
+    def printcast3(self,w=False):
+        out = ''
+        for i in range(self.ndocc):
+            for j in range(self.ndocc):
+                for k in range(self.ndocc):
+                    for a in range(self.nvir):
+                        for b in range(self.nvir):
+                            for c in range(self.nvir):
+                                x = self.CAS_T3aba[i,j,k,a,b,c]
+                                if abs(x) > 1e-6:
+                                    out += '{}a {}b {}a -> {}a {}b {}a  {:< 5.6f}'.format(i+1,j+1,k+1,1+a+self.ndocc,1+b+self.ndocc,1+c+self.ndocc,x)
+                                    out += '\n'
+                                y = self.CAS_T3aaa[i,j,k,a,b,c]
+                                if abs(y) > 1e-6:
+                                    out += '{}a {}a {}a -> {}a {}a {}a  {:< 5.6f}'.format(i+1,j+1,k+1,1+a+self.ndocc,1+b+self.ndocc,1+c+self.ndocc,y)
+                                    out += '\n'
+        if w:
+            fil = open('t3amps.dat','w') 
+            fil.write(out)
+            fil.close()
+        else:
+            print(out)
+
     def HTCCSD(self, active_space='', CC_CONV=6, CC_MAXITER=50):
         
         # Compute CAS
@@ -284,8 +378,8 @@ class HTCCSD:
         self.CAS_T3aaa = np.zeros([self.ndocc, self.ndocc, self.ndocc, self.nvir, self.nvir, self.nvir])
         self.CAS_T3aba = np.zeros([self.ndocc, self.ndocc, self.ndocc, self.nvir, self.nvir, self.nvir])
 
-        #self.CAS_T4abaa = np.zeros([self.ndocc, self.ndocc, self.ndocc, self.ndocc, self.nvir, self.nvir, self.nvir, self.nvir])
-        #self.CAS_T4abab = np.zeros([self.ndocc, self.ndocc, self.ndocc, self.ndocc, self.nvir, self.nvir, self.nvir, self.nvir])
+        self.CAS_T4abaa = np.zeros([self.ndocc, self.ndocc, self.ndocc, self.ndocc, self.nvir, self.nvir, self.nvir, self.nvir])
+        self.CAS_T4abab = np.zeros([self.ndocc, self.ndocc, self.ndocc, self.ndocc, self.nvir, self.nvir, self.nvir, self.nvir])
 
         # Search for the appropriate coefficients using a model Determinant
 
@@ -315,6 +409,11 @@ class HTCCSD:
                     for b in self.CAS_particles:
                         search = self.ref.copy()
                         p = 1
+
+                        # anh -> i
+                        p *= search.sign_del_alpha(i)
+                        search.rmv_alpha(i)
+
                         # anh -> j
                         p *= search.sign_del_beta(j)
                         search.rmv_beta(j)
@@ -322,10 +421,6 @@ class HTCCSD:
                         # cre -> b
                         p *= search.sign_del_beta(b + self.ndocc)
                         search.add_beta(b + self.ndocc)
-
-                        # anh -> i
-                        p *= search.sign_del_alpha(i)
-                        search.rmv_alpha(i)
 
                         # cre -> a
                         p *= search.sign_del_alpha(a + self.ndocc)
@@ -352,27 +447,35 @@ class HTCCSD:
                                     continue
                                 search = self.ref.copy()
                                 p = 1
-                                # anh (k) cre(c) anh(j) cre(b) anh(i) cre(a)
-                                p *= search.sign_del_alpha(k)
-                                search.rmv_alpha(k)
 
-                                p *= search.sign_del_alpha(c + self.ndocc)
-                                search.add_alpha(c + self.ndocc)
-
-                                p *= search.sign_del_alpha(j)
-                                search.rmv_alpha(j)
-
-                                p *= search.sign_del_alpha(b + self.ndocc)
-                                search.add_alpha(b + self.ndocc)
-
+                                # anh -> i
                                 p *= search.sign_del_alpha(i)
                                 search.rmv_alpha(i)
 
+                                # anh -> j
+                                p *= search.sign_del_alpha(j)
+                                search.rmv_alpha(j)
+
+                                # anh -> k
+                                p *= search.sign_del_alpha(k)
+                                search.rmv_alpha(k)
+
+                                # cre -> c
+                                p *= search.sign_del_alpha(c + self.ndocc)
+                                search.add_alpha(c + self.ndocc)
+
+                                # cre -> b
+                                p *= search.sign_del_alpha(b + self.ndocc)
+                                search.add_alpha(b + self.ndocc)
+
+                                # cre -> a
                                 p *= search.sign_del_alpha(a + self.ndocc)
                                 search.add_alpha(a + self.ndocc)
 
                                 index = self.determinants.index(search)
                                 self.CAS_T3aaa[i,j,k,a,b,c] = self.Ccas[index]*p
+
+        # Second Case: aba -> aba
 
         for i in self.CAS_holes:
             for a in self.CAS_particles:
@@ -385,27 +488,141 @@ class HTCCSD:
                                     continue
                                 search = self.ref.copy()
                                 p = 1
-                                # anh (k) cre(c) anh(j) cre(b) anh(i) cre(a)
-                                p *= search.sign_del_alpha(k)
-                                search.rmv_alpha(k)
 
-                                p *= search.sign_del_alpha(c + self.ndocc)
-                                search.add_alpha(c + self.ndocc)
-
-                                p *= search.sign_del_beta(j)
-                                search.rmv_beta(j)
-
-                                p *= search.sign_del_beta(b + self.ndocc)
-                                search.add_beta(b + self.ndocc)
-
+                                # anh -> i
                                 p *= search.sign_del_alpha(i)
                                 search.rmv_alpha(i)
 
+                                # anh -> j
+                                p *= search.sign_del_beta(j)
+                                search.rmv_beta(j)
+
+                                # anh -> k
+                                p *= search.sign_del_alpha(k)
+                                search.rmv_alpha(k)
+
+                                # cre -> c
+                                p *= search.sign_del_alpha(c + self.ndocc)
+                                search.add_alpha(c + self.ndocc)
+
+                                # cre -> b
+                                p *= search.sign_del_beta(b + self.ndocc)
+                                search.add_beta(b + self.ndocc)
+
+                                # cre -> a
                                 p *= search.sign_del_alpha(a + self.ndocc)
                                 search.add_alpha(a + self.ndocc)
 
                                 index = self.determinants.index(search)
                                 self.CAS_T3aba[i,j,k,a,b,c] = self.Ccas[index]*p
+
+        # Quadruples 
+
+        # First case: abaa -> abaa
+
+        for i in self.CAS_holes:
+            for a in self.CAS_particles:
+                for j in self.CAS_holes:
+                    for b in self.CAS_particles:
+                        for k in self.CAS_holes:
+                            for c in self.CAS_particles:
+                                for l in self.CAS_holes:
+                                    for d in self.CAS_particles:
+                                        # Same spin indexes cannot be the same
+                                        if i == k or i == l or k == l:
+                                            continue
+                                        if a == c or a == d or c == d:
+                                            continue
+                                        search = self.ref.copy()
+                                        p = 1
+
+                                        # anh -> i
+                                        p *= search.sign_del_alpha(i)
+                                        search.rmv_alpha(i)
+
+                                        # anh -> j
+                                        p *= search.sign_del_beta(j)
+                                        search.rmv_beta(j)
+
+                                        # anh -> k
+                                        p *= search.sign_del_alpha(k)
+                                        search.rmv_alpha(k)
+
+                                        # anh -> l
+                                        p *= search.sign_del_alpha(l)
+                                        search.rmv_alpha(l)
+
+                                        # cre -> d
+                                        p *= search.sign_del_alpha(d + self.ndocc)
+                                        search.add_alpha(d + self.ndocc)
+
+                                        # cre -> c
+                                        p *= search.sign_del_alpha(c + self.ndocc)
+                                        search.add_alpha(c + self.ndocc)
+
+                                        # cre -> b
+                                        p *= search.sign_del_beta(b + self.ndocc)
+                                        search.add_beta(b + self.ndocc)
+
+                                        # cre -> a
+                                        p *= search.sign_del_alpha(a + self.ndocc)
+                                        search.add_alpha(a + self.ndocc)
+
+                                        index = self.determinants.index(search)
+                                        self.CAS_T4abaa[i,j,k,l,a,b,c,d] = self.Ccas[index]*p
+
+        # Second case: abab -> abab
+
+        for i in self.CAS_holes:
+            for a in self.CAS_particles:
+                for j in self.CAS_holes:
+                    for b in self.CAS_particles:
+                        for k in self.CAS_holes:
+                            for c in self.CAS_particles:
+                                for l in self.CAS_holes:
+                                    for d in self.CAS_particles:
+                                        # Same spin indexes cannot be the same
+                                        if i == k or j == l:
+                                            continue
+                                        if a == c or b == d:
+                                            continue
+                                        search = self.ref.copy()
+                                        p = 1
+
+                                        # anh -> i
+                                        p *= search.sign_del_alpha(i)
+                                        search.rmv_alpha(i)
+
+                                        # anh -> j
+                                        p *= search.sign_del_beta(j)
+                                        search.rmv_beta(j)
+
+                                        # anh -> k
+                                        p *= search.sign_del_alpha(k)
+                                        search.rmv_alpha(k)
+
+                                        # anh -> l
+                                        p *= search.sign_del_beta(l)
+                                        search.rmv_beta(l)
+
+                                        # cre -> d
+                                        p *= search.sign_del_beta(d + self.ndocc)
+                                        search.add_beta(d + self.ndocc)
+
+                                        # cre -> c
+                                        p *= search.sign_del_alpha(c + self.ndocc)
+                                        search.add_alpha(c + self.ndocc)
+
+                                        # cre -> b
+                                        p *= search.sign_del_beta(b + self.ndocc)
+                                        search.add_beta(b + self.ndocc)
+
+                                        # cre -> a
+                                        p *= search.sign_del_alpha(a + self.ndocc)
+                                        search.add_alpha(a + self.ndocc)
+
+                                        index = self.determinants.index(search)
+                                        self.CAS_T4abab[i,j,k,l,a,b,c,d] = self.Ccas[index]*p
 
         # Translate CI coefficients into CC amplitudes
 
@@ -419,57 +636,100 @@ class HTCCSD:
         self.CAS_T2 -= np.einsum('ia,jb-> ijab', self.CAS_T1, self.CAS_T1)
 
         # Triples
-        # First case aaa -> aaa
+        ## First case aaa -> aaa
         self.CAS_T3aaa = self.CAS_T3aaa/C0
 
-        X = self.CAS_T2 - self.CAS_T2.transpose(1,0,2,3)
-        X = np.einsum('ia, jkbc -> ijkabc', self.CAS_T1, X)
+        T2aa = self.CAS_T2 - np.einsum('ijab -> jiab', self.CAS_T2)
 
-        X =   + np.einsum('ijkabc -> ijkabc',X)  - np.einsum('ijkabc -> ijkbac', X) + np.einsum('ijkabc -> ijkcab', X) \
-              - np.einsum('ijkabc -> jikabc', X) + np.einsum('ijkabc -> jikbac', X) - np.einsum('ijkabc -> jikcab', X) \
-              + np.einsum('ijkabc -> kijabc', X) - np.einsum('ijkabc -> kijbac', X) + np.einsum('ijkabc -> kijcab', X) 
+        self.CAS_T3aaa -=   + np.einsum('ia,jkbc ->ijkabc',self.CAS_T1,T2aa)  - np.einsum('ib,jkac -> ijkabc', self.CAS_T1,T2aa) + np.einsum('ic,jkab -> ijkabc', self.CAS_T1,T2aa) \
+                            - np.einsum('ja,ikbc ->ijkabc',self.CAS_T1,T2aa)  + np.einsum('jb,ikac -> ijkabc', self.CAS_T1,T2aa) - np.einsum('jc,ikab -> ijkabc', self.CAS_T1,T2aa) \
+                            + np.einsum('ka,ijbc ->ijkabc',self.CAS_T1,T2aa)  - np.einsum('kb,ijac -> ijkabc', self.CAS_T1,T2aa) + np.einsum('kc,ijab -> ijkabc', self.CAS_T1,T2aa) 
 
-        Y = np.einsum('ia,jb,kc->ijkabc', self.CAS_T1, self.CAS_T1, self.CAS_T1)
+        self.CAS_T3aaa -= + np.einsum('ia,jb,kc -> ijkabc', self.CAS_T1,self.CAS_T1,self.CAS_T1) - np.einsum('ia,jc,kb -> ijkabc', self.CAS_T1,self.CAS_T1,self.CAS_T1) \
+                          - np.einsum('ib,ja,kc -> ijkabc', self.CAS_T1,self.CAS_T1,self.CAS_T1) + np.einsum('ib,jc,ka -> ijkabc', self.CAS_T1,self.CAS_T1,self.CAS_T1) \
+                          + np.einsum('ic,ja,kb -> ijkabc', self.CAS_T1,self.CAS_T1,self.CAS_T1) - np.einsum('ic,jb,ka -> ijkabc', self.CAS_T1,self.CAS_T1,self.CAS_T1) 
 
-        Y = + np.einsum('ijkabc -> ijkabc', Y) - np.einsum('ijkabc -> ijkacb', Y) \
-            - np.einsum('ijkabc -> ijkbac', Y) + np.einsum('ijkabc -> ijkbca', Y) \
-            + np.einsum('ijkabc -> ijkcab', Y) - np.einsum('ijkabc -> ijkcba', Y) 
-
-        self.CAS_T3aaa = self.CAS_T3aaa - X - Y
-
-        # Second case aba -> aba
+        ## Second case aba -> aba
 
         self.CAS_T3aba = self.CAS_T3aba/C0
 
-        self.CAS_T3aba -= + np.einsum('ia,kjcb -> ijkabc', self.CAS_T1, self.CAS_T2) \
-                          - np.einsum('ic,kjab -> ijkabc', self.CAS_T1, self.CAS_T2) \
-                          - np.einsum('ka,ijcb -> ijkabc', self.CAS_T1, self.CAS_T2) \
-                          + np.einsum('kc,ijab -> ijkabc', self.CAS_T1, self.CAS_T2) \
-                          + np.einsum('jb,ikac -> ijkabc', self.CAS_T1, self.CAS_T2) \
-                          - np.einsum('jb,kiac -> ijkabc', self.CAS_T1, self.CAS_T2) \
+        self.CAS_T3aba += - np.einsum('ia,kjcb -> ijkabc', self.CAS_T1, self.CAS_T2) \
+                          + np.einsum('ic,kjab -> ijkabc', self.CAS_T1, self.CAS_T2) \
+                          + np.einsum('ka,ijcb -> ijkabc', self.CAS_T1, self.CAS_T2) \
+                          - np.einsum('kc,ijab -> ijkabc', self.CAS_T1, self.CAS_T2) \
+                          - np.einsum('jb,ikac -> ijkabc', self.CAS_T1, T2aa)
 
-        self.CAS_T3aba -= + np.einsum('ia,jb,kc -> ijkabc', self.CAS_T1, self.CAS_T1, self.CAS_T1) \
-                          - np.einsum('ic,jb,ka -> ijkabc', self.CAS_T1, self.CAS_T1, self.CAS_T1) \
+        self.CAS_T3aba += - np.einsum('ia,jb,kc -> ijkabc', self.CAS_T1, self.CAS_T1, self.CAS_T1) \
+                          + np.einsum('ic,jb,ka -> ijkabc', self.CAS_T1, self.CAS_T1, self.CAS_T1) 
                              
-        for i in range(self.ndocc):
-            for j in range(self.ndocc):
-                    for a in range(self.nvir):
-                        for b in range(self.nvir):
-                                x = self.CAS_T2[i,j,a,b]
-                                if abs(x) > 1e-6:
-                                    print('{}a {}b -> {}a {}b {:<5.6f}'.format(i+1,j+1,1+a+self.ndocc,1+b+self.ndocc,x))
-        print('\n')
-        for i in range(self.ndocc):
-            for j in range(self.ndocc):
-                for k in range(self.ndocc):
-                    for a in range(self.nvir):
-                        for b in range(self.nvir):
-                            for c in range(self.nvir):
-                                x = self.CAS_T3aba[i,j,k,a,b,c]
-                                if abs(x) > 1e-6:
-                                    print('{}a {}b {}a -> {}a {}b {}a  {:< 5.6f}'.format(i+1,j+1,k+1,1+a+self.ndocc,1+b+self.ndocc,1+c+self.ndocc,x))
-                                    #print('X: {} Y {}'.format(X[i,j,k,a,b,c], Y[i,j,k,a,b,c]))
+        # Quadruples
+        ## First case abaa -> abaa
+
+        self.CAS_T4abaa = self.CAS_T4abaa/C0
+
+        ### T1 * T3 terms
+
+        self.CAS_T4abaa += - np.einsum('ia, kjlcbd -> ijklabcd', self.CAS_T1, self.CAS_T3aba) \
+                           + np.einsum('ic, kjlabd -> ijklabcd', self.CAS_T1, self.CAS_T3aba) \
+                           - np.einsum('id, kjlabc -> ijklabcd', self.CAS_T1, self.CAS_T3aba) \
+                           - np.einsum('jb, iklacd -> ijklabcd', self.CAS_T1, self.CAS_T3aaa) \
+                           + np.einsum('ka, ijlcbd -> ijklabcd', self.CAS_T1, self.CAS_T3aba) \
+                           - np.einsum('kc, ijlabd -> ijklabcd', self.CAS_T1, self.CAS_T3aba) \
+                           + np.einsum('kd, ijlabc -> ijklabcd', self.CAS_T1, self.CAS_T3aba) \
+                           - np.einsum('la, ijkcbd -> ijklabcd', self.CAS_T1, self.CAS_T3aba) \
+                           + np.einsum('lc, ijkabd -> ijklabcd', self.CAS_T1, self.CAS_T3aba) \
+                           - np.einsum('ld, ijkabc -> ijklabcd', self.CAS_T1, self.CAS_T3aba)
+
+        ### T2 * T2 terms
+
+        self.CAS_T4abaa += - np.einsum('ijab, klcd -> ijklabcd', self.CAS_T2, T2aa) \
+                           + np.einsum('ijcb, klad -> ijklabcd', self.CAS_T2, T2aa) \
+                           - np.einsum('ijdb, klac -> ijklabcd', self.CAS_T2, T2aa) \
+                           - np.einsum('ljdb, ikac -> ijklabcd', self.CAS_T2, T2aa) \
+                           + np.einsum('ljcb, ikad -> ijklabcd', self.CAS_T2, T2aa) \
+                           - np.einsum('ljab, ikcd -> ijklabcd', self.CAS_T2, T2aa) \
+                           + np.einsum('kjdb, ilac -> ijklabcd', self.CAS_T2, T2aa) \
+                           - np.einsum('kjcb, ilad -> ijklabcd', self.CAS_T2, T2aa) \
+                           + np.einsum('kjab, ilcd -> ijklabcd', self.CAS_T2, T2aa) 
         
+        ### T1 * T1 * T2 terms
+
+        self.CAS_T4abaa += - np.einsum('jb,ia,klcd -> ijklabcd', self.CAS_T1, self.CAS_T1, T2aa) \
+                           + np.einsum('jb,ic,klad -> ijklabcd', self.CAS_T1, self.CAS_T1, T2aa) \
+                           - np.einsum('jb,id,klac -> ijklabcd', self.CAS_T1, self.CAS_T1, T2aa) \
+                           + np.einsum('jb,ka,ilcd -> ijklabcd', self.CAS_T1, self.CAS_T1, T2aa) \
+                           - np.einsum('jb,kc,ilad -> ijklabcd', self.CAS_T1, self.CAS_T1, T2aa) \
+                           + np.einsum('jb,kd,ilac -> ijklabcd', self.CAS_T1, self.CAS_T1, T2aa) \
+                           - np.einsum('jb,la,ikcd -> ijklabcd', self.CAS_T1, self.CAS_T1, T2aa) \
+                           + np.einsum('jb,lc,ikad -> ijklabcd', self.CAS_T1, self.CAS_T1, T2aa) \
+                           - np.einsum('jb,ld,ikac -> ijklabcd', self.CAS_T1, self.CAS_T1, T2aa) \
+                           - np.einsum('ia,kc,ljdb -> ijklabcd', self.CAS_T1, self.CAS_T1, self.CAS_T2) \
+                           + np.einsum('ia,kd,ljcb -> ijklabcd', self.CAS_T1, self.CAS_T1, self.CAS_T2) \
+                           + np.einsum('ia,lc,kjdb -> ijklabcd', self.CAS_T1, self.CAS_T1, self.CAS_T2) \
+                           - np.einsum('ia,ld,kjcb -> ijklabcd', self.CAS_T1, self.CAS_T1, self.CAS_T2) \
+                           + np.einsum('ic,ka,ljdb -> ijklabcd', self.CAS_T1, self.CAS_T1, self.CAS_T2) \
+                           - np.einsum('ic,kd,ljab -> ijklabcd', self.CAS_T1, self.CAS_T1, self.CAS_T2) \
+                           - np.einsum('ic,la,kjdb -> ijklabcd', self.CAS_T1, self.CAS_T1, self.CAS_T2) \
+                           + np.einsum('ic,ld,kjab -> ijklabcd', self.CAS_T1, self.CAS_T1, self.CAS_T2) \
+                           - np.einsum('id,ka,ljcb -> ijklabcd', self.CAS_T1, self.CAS_T1, self.CAS_T2) \
+                           + np.einsum('id,kc,ljab -> ijklabcd', self.CAS_T1, self.CAS_T1, self.CAS_T2) \
+                           + np.einsum('id,la,kjcb -> ijklabcd', self.CAS_T1, self.CAS_T1, self.CAS_T2) \
+                           - np.einsum('id,lc,kjab -> ijklabcd', self.CAS_T1, self.CAS_T1, self.CAS_T2) \
+                           - np.einsum('ka,lc,ijdb -> ijklabcd', self.CAS_T1, self.CAS_T1, self.CAS_T2) \
+                           + np.einsum('ka,ld,ijcb -> ijklabcd', self.CAS_T1, self.CAS_T1, self.CAS_T2) \
+                           + np.einsum('kc,la,ijdb -> ijklabcd', self.CAS_T1, self.CAS_T1, self.CAS_T2) \
+                           - np.einsum('kc,ld,ijab -> ijklabcd', self.CAS_T1, self.CAS_T1, self.CAS_T2) \
+                           - np.einsum('kd,la,ijcb -> ijklabcd', self.CAS_T1, self.CAS_T1, self.CAS_T2) \
+                           + np.einsum('kd,lc,ijab -> ijklabcd', self.CAS_T1, self.CAS_T1, self.CAS_T2)
+
+        ### T1 * T1 * T1 * T1 terms
+
+        self.CAS_T4abaa += - np.einsum('jb, ia, kc, ld -> ijkabcd', self.CAS_T1,self.CAS_T1,self.CAS_T1,self.CAS_T1) \
+                           + np.einsum('jb, ia, kd, lc -> ijkabcd', self.CAS_T1,self.CAS_T1,self.CAS_T1,self.CAS_T1) \
+                           + np.einsum('jb, ic, ka, ld -> ijkabcd', self.CAS_T1,self.CAS_T1,self.CAS_T1,self.CAS_T1) \
+                           - np.einsum('jb, ic, kd, la -> ijkabcd', self.CAS_T1,self.CAS_T1,self.CAS_T1,self.CAS_T1) \
+                           - np.einsum('jb, id, ka, lc -> ijkabcd', self.CAS_T1,self.CAS_T1,self.CAS_T1,self.CAS_T1) \
+                           + np.einsum('jb, id, kc, la -> ijkabcd', self.CAS_T1,self.CAS_T1,self.CAS_T1,self.CAS_T1) 
 
         self.T2 = self.CAS_T2
         self.T1 = self.CAS_T1
@@ -478,75 +738,80 @@ class HTCCSD:
         print(self.Ecas)
         print(self.Ecc + self.Escf)
 
+        # Slices
+        
+        o = slice(0, self.ndocc)
+        v = slice(self.ndocc, self.nbf)
 
-#       # Compute CCSD 
-#
-#        print('------- TAILORED COUPLED CLUSTER STARTED -------\n')
-#
-#        # Slices
-#        
-#        o = slice(0, self.ndocc)
-#        v = slice(self.ndocc, self.nbf)
-#
-#        # START CCSD CODE
-#
-#        # Build the Auxiliar Matrix D
-#
-#        print('Building Auxiliar D matrix...\n')
-#        t = time.time()
-#        self.D  = np.zeros([self.ndocc, self.ndocc, self.nvir, self.nvir])
-#        self.d  = np.zeros([self.ndocc, self.nvir])
-#        
-#        for i,ei in enumerate(self.eps[o]):
-#            for j,ej in enumerate(self.eps[o]):
-#                for a,ea in enumerate(self.eps[v]):
-#                    self.d[i,a] = 1/(ea - ei)
-#                    for b,eb in enumerate(self.eps[v]):
-#                        self.D[i,j,a,b] = 1/(ei + ej - ea - eb)
-#
-#        print('Done. Time required: {:.5f} seconds'.format(time.time() - t))
-#        t = time.time()
-#        
-#        # Generate initial T1 and T2 amplitudes
-#
-#        self.T1 = np.zeros([self.ndocc, self.nvir])
-#        self.T2  = np.zeros([self.ndocc, self.ndocc, self.nvir, self.nvir])
-#        
-#        self.clean_internal_space()
-#
-#        self.cc_energy()
-#
-#        print('CC Energy from CAS Amplitudes: {:<5.10f}'.format(self.Ecc+self.Escf))
-#
-#        self.r1 = 1
-#        self.r2 = 1
-#            
-#        LIM = 10**(-CC_CONV)
-#        ite = 0
-#        
-#        while self.r2 > LIM or self.r1 > LIM:
-#            ite += 1
-#            if ite > CC_MAXITER:
-#                raise NameError("CC Equations did not converge in {} iterations".format(CC_MAXITER))
-#            Eold = self.Ecc
-#            t = time.time()
-#            self.T1_T2_Update()
-#            self.cc_energy()
-#            dE = self.Ecc - Eold
-#            print('-'*50)
-#            print("Iteration {}".format(ite))
-#            print("CC Correlation energy: {}".format(self.Ecc))
-#            print("Energy change:         {}".format(dE))
-#            print("T1 Residue:            {}".format(self.r1))
-#            print("T2 Residue:            {}".format(self.r2))
-#            print("Time required:         {}".format(time.time() - t))
-#            print('-'*50)
-#        
-#        self.Ecc = self.Ecc + self.Escf
-#
-#        print("\nTCC Equations Converged!!!")
-#        print("Final TCCSD Energy:     {:<5.10f}".format(self.Ecc))
-#        print("Total Computation time:        {}".format(time.time() - tinit))
+        # Compute T3 contribution to T1
+
+        self.T3onT1 = (1.0/4.0)*np.einsum('mnef,imnaef->ia', (self.Vint - self.Vint.swapaxes(2,3))[o,o,v,v], self.CAS_T3aaa) \
+                      + np.einsum('mnef,imnaef->ia', self.Vint[o,o,v,v], self.CAS_T3aba)
+
+       # Compute CCSD 
+
+        print('------- TAILORED COUPLED CLUSTER STARTED -------\n')
+
+
+        # START CCSD CODE
+
+        # Build the Auxiliar Matrix D
+
+        print('Building Auxiliar D matrix...\n')
+        t = time.time()
+        self.D  = np.zeros([self.ndocc, self.ndocc, self.nvir, self.nvir])
+        self.d  = np.zeros([self.ndocc, self.nvir])
+        
+        for i,ei in enumerate(self.eps[o]):
+            for j,ej in enumerate(self.eps[o]):
+                for a,ea in enumerate(self.eps[v]):
+                    self.d[i,a] = 1/(ea - ei)
+                    for b,eb in enumerate(self.eps[v]):
+                        self.D[i,j,a,b] = 1/(ei + ej - ea - eb)
+
+        print('Done. Time required: {:.5f} seconds'.format(time.time() - t))
+        t = time.time()
+        
+        # Generate initial T1 and T2 amplitudes
+
+        self.T1 = np.zeros([self.ndocc, self.nvir])
+        #self.T2  = np.zeros([self.ndocc, self.ndocc, self.nvir, self.nvir])
+        
+        self.cc_energy()
+
+        print('CC Energy from CAS Amplitudes: {:<5.10f}'.format(self.Ecc+self.Escf))
+
+        self.r1 = 1
+        self.r2 = 0 #debug
+            
+        LIM = 10**(-CC_CONV)
+        ite = 0
+        
+        self.printcast3(w=True)
+        
+       # while self.r2 > LIM or self.r1 > LIM:
+       #     ite += 1
+       #     if ite > CC_MAXITER:
+       #         raise NameError("CC Equations did not converge in {} iterations".format(CC_MAXITER))
+       #     Eold = self.Ecc
+       #     t = time.time()
+       #     self.T1_Update()
+       #     self.cc_energy()
+       #     dE = self.Ecc - Eold
+       #     print('-'*50)
+       #     print("Iteration {}".format(ite))
+       #     print("CC Correlation energy: {}".format(self.Ecc))
+       #     print("Energy change:         {}".format(dE))
+       #     print("T1 Residue:            {}".format(self.r1))
+       #     print("T2 Residue:            {}".format(self.r2))
+       #     print("Time required:         {}".format(time.time() - t))
+       #     print('-'*50)
+       # 
+       # self.Ecc = self.Ecc + self.Escf
+
+       # print("\nTCC Equations Converged!!!")
+       # print("Final TCCSD Energy:     {:<5.10f}".format(self.Ecc))
+       # print("Total Computation time:        {}".format(time.time() - tinit))
 
         
         

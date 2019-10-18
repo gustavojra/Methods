@@ -5,6 +5,7 @@ import numpy as np
 import scipy.linalg as la
 import time
 import copy
+from multiprocessing import Pool
 from itertools import permutations
 
 file_dir = os.path.dirname('../../Aux/')
@@ -48,7 +49,6 @@ class CAS:
         self.h = np.einsum('up,vq,uv->pq', self.C, self.C, self.h)
         print("Completed in {} seconds!".format(time.time()-t))
 
-    
     def CAS(self, active_space='', show_prog = False):
 
         # Read active space and determine number of active electrons. 
@@ -137,9 +137,24 @@ class CAS:
         # Construct the Hamiltonian Matrix
         # Note: Input for two electron integral must be using Chemists' notation
 
-        H = get_H(self.determinants, self.h, self.Vint.swapaxes(1,2), v = True, t = True)
+        # Serial
+        #H = get_H(self.determinants, self.h, self.Vint.swapaxes(1,2), v = True, t = True)
 
-        # Diagonalize the Hamiltonian Matrix
+        # Parallel
+
+        t = time.time()
+
+        l = len(self.determinants)
+        H = np.zeros((l,l))
+        X = H_generator(self.h, self.Vint.swapaxes(1,2), self.determinants)
+        p = Pool(6)
+        a,b = np.triu_indices(l)
+        indices = list(zip(a,b))
+        out = p.map(X.gen, indices)
+        H[a,b] = out
+        print('time parallel: {}'.format(time.time()-t))
+
+        #Diagonalize the Hamiltonian Matrix
 
         print("Diagonalizing Hamiltonian Matrix")
         t0 = time.time()
@@ -149,3 +164,4 @@ class CAS:
         self.Ccas = Ccas[:,0]
         print("Completed. Time needed: {}".format(tf - t0))
         print("CAS Energy: {:<5.10f}".format(self.Ecas))
+

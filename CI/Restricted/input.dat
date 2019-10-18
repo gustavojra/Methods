@@ -1,13 +1,13 @@
 import os
 import sys
 import numpy as np
-from HTCCSD import HTCCSD
+from CAS import CAS
 
 molecule mol {
     0 1
-    He 
-    He 1 1.0
-    He 1 1.0 2 120.0
+    O
+    H 1 1.0
+    H 1 1.0 2 104.52
     symmetry c1
 }
 
@@ -17,11 +17,8 @@ set {
     SCF_TYPE      PK
     SOSCF         True
     E_CONVERGENCE 8
-    MAXITER       100
-    MAX_ATTEMPTS  10
-    GUESS         READ
 }
 
-X = HTCCSD(mol)
+x = CAS(mol)
 
-X.HTCCSD('full')
+x.CAS('aaaaaaa' + 6*'u')
