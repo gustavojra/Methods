@@ -192,81 +192,11 @@ class HTCCSD:
         S -=     np.einsum('avpi,uiag->uvpg', F11, self.T2,                                optimize=EINSUMOPT)
         S +=     np.einsum('avig,uipa->uvpg', F12, 2*self.T2 - self.T2.transpose(0,1,3,2), optimize=EINSUMOPT)
     
-        T2new = self.Vint[o,o,v,v] + J + J.transpose(1,0,3,2) + S + S.transpose(1,0,3,2)
+        T2new = self.Vint[o,o,v,v] + J + J.transpose(1,0,3,2) + S + S.transpose(1,0,3,2) + self.T3onT2 #+ self.T4onT2
     
         T2new = np.einsum('uvpg,uvpg->uvpg', T2new, self.D,optimize=EINSUMOPT)
 
-    
-        #self.r2 = np.sum(np.abs(T2new - self.T2)) #- np.sum(np.abs(self.internal_T2))
-    
-        # T1 Amplitudes update
-        
-        T1new =    np.einsum('ui,ip->up',      giu, self.T1,                                   optimize=EINSUMOPT)
-        T1new -=   np.einsum('ap,ua->up',      gap, self.T1,                                   optimize=EINSUMOPT)
-        T1new -=   np.einsum('juai,ja,ip->up', 2*D1 - D1.transpose(3,1,2,0), self.T1, self.T1, optimize=EINSUMOPT)
-        T1new -=   np.einsum('auip,ia->up',    2*(D2a - D2b) + D2c, self.T1,                   optimize=EINSUMOPT)
-        T1new -=   np.einsum('aup->up',        F2a,                                            optimize=EINSUMOPT)
-        T1new +=   np.einsum('uiip->up',       1.0/2.0*(E2a - E2b) + E2c,                      optimize=EINSUMOPT)
-        T1new +=   np.einsum('uip->up',        C1,                                             optimize=EINSUMOPT)
-        T1new -= 2*np.einsum('uipi->up',       D1,                                             optimize=EINSUMOPT)
-    
-        T1new = np.einsum('up,up->up', T1new, self.d, optimize=EINSUMOPT)
-        
-        T1old = copy.deepcopy(self.T1)
-        self.T1 = T1new
-    
-        T2old = copy.deepcopy(self.T2)
-        self.T2 = T2new
-
-        self.clean_internal_space()
-
-        #self.r1 = np.sum(np.abs(T1new - self.T1)) #- np.sum(np.abs(self.internal_T1))
-        self.r1 = np.sum(np.abs(T1old - self.T1)) 
-        self.r2 = np.sum(np.abs(T2old - self.T2)) 
-    
-        #self.T1, self.T2 = T1new, T2new
-
-    def T1_Update(self, EINSUMOPT='optimal'):
-    
-        # Compute CCSD Amplitudes. Only the T1 (alpha -> alpha) are considered since the beta -> beta case yields the same amplitude and the mixed case is zero.
-        # For T2 amplitudes we consider the case (alpha -> alpha, beta -> beta) the other spin cases can be writen in terms of this one.
-        # Equations from J. Chem. Phys. 86, 2881 (1987): G. E. Scuseria et al.
-        # CC Intermediate arrays
-    
-        o = slice(0, self.ndocc)
-        v = slice(self.ndocc, self.nbf)
-
-        tau = self.T2 + np.einsum('ia,jb->ijab', self.T1, self.T1,optimize=EINSUMOPT)
-        Te = 0.5*self.T2 + np.einsum('ia,jb->ijab', self.T1, self.T1,optimize=EINSUMOPT)
-    
-        A2l = np.einsum('uvij,ijpg->uvpg', self.Vint[o,o,o,o], tau,                                    optimize=EINSUMOPT)
-        B2l = np.einsum('abpg,uvab->uvpg', self.Vint[v,v,v,v], tau,                                    optimize=EINSUMOPT)
-        C1  = np.einsum('uaip,ia->uip',    self.Vint[o,v,o,v], self.T1,                                optimize=EINSUMOPT) 
-        C2  = np.einsum('aupi,viga->pvug', self.Vint[v,o,v,o], self.T2,                                optimize=EINSUMOPT)
-        C2l = np.einsum('iaug,ivpa->pvug', self.Vint[o,v,o,v], tau,                                    optimize=EINSUMOPT)
-        D1  = np.einsum('uapi,va->uvpi',   self.Vint[o,v,v,o], self.T1,                                optimize=EINSUMOPT)
-        D2l = np.einsum('abij,uvab->uvij', self.Vint[v,v,o,o], tau,                                    optimize=EINSUMOPT)
-        Ds2l= np.einsum('acij,ijpb->acpb', self.Vint[v,v,o,o], tau,                                    optimize=EINSUMOPT)
-        D2a = np.einsum('baji,vjgb->avig', self.Vint[v,v,o,o], 2*self.T2 - self.T2.transpose(0,1,3,2), optimize=EINSUMOPT)
-        D2b = np.einsum('baij,vjgb->avig', self.Vint[v,v,o,o], self.T2,                                optimize=EINSUMOPT)
-        D2c = np.einsum('baij,vjbg->avig', self.Vint[v,v,o,o], self.T2,                                optimize=EINSUMOPT)
-        Es1 = np.einsum('uvpi,ig->uvpg',   self.Vint[o,o,v,o], self.T1,                                optimize=EINSUMOPT)
-        E1  = np.einsum('uaij,va->uvij',   self.Vint[o,v,o,o], self.T1,                                optimize=EINSUMOPT)
-        E2a = np.einsum('buji,vjgb->uvig', self.Vint[v,o,o,o], 2*self.T2 - self.T2.transpose(0,1,3,2), optimize=EINSUMOPT)
-        E2b = np.einsum('buij,vjgb->uvig', self.Vint[v,o,o,o], self.T2,                                optimize=EINSUMOPT)
-        E2c = np.einsum('buij,vjbg->uvig', self.Vint[v,o,o,o], self.T2,                                optimize=EINSUMOPT)
-        F11 = np.einsum('bapi,va->bvpi',   self.Vint[v,v,v,o], self.T1,                                optimize=EINSUMOPT)
-        F12 = np.einsum('baip,va->bvip',   self.Vint[v,v,o,v], self.T1,                                optimize=EINSUMOPT)
-        Fs1 = np.einsum('acpi,ib->acpb',   self.Vint[v,v,v,o], self.T1,                                optimize=EINSUMOPT)
-        F2a = np.einsum('abpi,uiab->aup',  self.Vint[v,v,v,o], 2*self.T2 - self.T2.transpose(0,1,3,2), optimize=EINSUMOPT) 
-        F2l = np.einsum('abpi,uvab->uvpi', self.Vint[v,v,v,o], tau,                                    optimize=EINSUMOPT)
-    
-        X = E1 + D2l
-
-        giu = np.einsum('ujij->ui', 2*X - X.transpose(0,1,3,2), optimize=EINSUMOPT)
-        
-        X = Fs1 - Ds2l
-        gap = np.einsum('abpb->ap', 2*X - X.transpose(1,0,2,3), optimize=EINSUMOPT)
+        self.r2 = np.sum(np.abs(T2new - self.T2))
     
         # T1 Amplitudes update
         
@@ -278,16 +208,14 @@ class HTCCSD:
         T1new +=   np.einsum('uiip->up',       1.0/2.0*(E2a - E2b) + E2c,                      optimize=EINSUMOPT)
         T1new +=   np.einsum('uip->up',        C1,                                             optimize=EINSUMOPT)
         T1new -= 2*np.einsum('uipi->up',       D1,                                             optimize=EINSUMOPT)
-    
-        #T1new += self.T3onT1
 
+        T1new += self.T3onT1
+    
         T1new = np.einsum('up,up->up', T1new, self.d, optimize=EINSUMOPT)
         
-        self.r1 = np.sum(np.abs(T1new - self.T1))
-
-        self.T1 = T1new
-
-        #self.T1, self.T2 = T1new, T2new
+        self.r1 = np.sum(np.abs(T1new - self.T1)) 
+    
+        self.T1, self.T2 = T1new, T2new
 
     # PRINT FUNCTIONS FOR DEBUGGING
 
@@ -861,17 +789,53 @@ class HTCCSD:
         o = slice(0, self.ndocc)
         v = slice(self.ndocc, self.nbf)
 
+        # DEBUG AREAAA ########
+        self.CAS_T4abaa = np.zeros([self.ndocc, self.ndocc, self.ndocc, self.ndocc, self.nvir, self.nvir, self.nvir, self.nvir])
+        self.CAS_T4abab = np.zeros([self.ndocc, self.ndocc, self.ndocc, self.ndocc, self.nvir, self.nvir, self.nvir, self.nvir])
+
+        
+        # END DEBUG ############
+
+
         # Compute T3 contribution to T1
 
-        self.T3onT1 = (1.0/4.0)*np.einsum('mnef,imnaef->ia', (self.Vint - self.Vint.swapaxes(2,3))[o,o,v,v], self.CAS_T3aaa) \
-                      + np.einsum('mnef,imnaef->ia', self.Vint[o,o,v,v], self.CAS_T3aba)
+        self.T3onT1 = + np.einsum('mnef,imnaef->ia', (self.Vint - self.Vint.swapaxes(2,3))[o,o,v,v], self.CAS_T3aaa) \
+                      + np.einsum('mnef,mineaf->ia', (self.Vint - self.Vint.swapaxes(2,3))[o,o,v,v], self.CAS_T3aba) \
+                      + 2*np.einsum('mnef,imnaef->ia', self.Vint[o,o,v,v], self.CAS_T3aba) \
+                      + 2*np.einsum('mnef,inmafe->ia', self.Vint[o,o,v,v], self.CAS_T3aba) 
+
+        self.T3onT1 *= (1.0/4.0)
 
         # Compute T3 contribution to T2
 
         X = np.einsum('bmef, ijmaef -> ijab', self.Vint[v,o,v,v], self.CAS_T3aba) + \
-            np.einsum('bmef, jimeaf -> ijab', (self.Vint - self.Vint.swapaxes(2,3))[o,o,v,v], self.CAS_T3aba)
+            np.einsum('bmfe, ijmafe -> ijab', self.Vint[v,o,v,v], self.CAS_T3aba) + \
+            np.einsum('bmef, jimeaf -> ijab', (self.Vint - self.Vint.swapaxes(2,3))[v,o,v,v], self.CAS_T3aba)
 
         self.T3onT2 = 0.5*(X - np.einsum('ijab -> ijba', X))
+
+        X = np.einsum('mnje, imnabe -> ijab', self.Vint[o,o,o,v], self.CAS_T3aba) + \
+            np.einsum('mnej, inmabe -> ijab', self.Vint[o,o,o,v], self.CAS_T3aba) + \
+            np.einsum('mnje, minbae -> ijab', (self.Vint - self.Vint.swapaxes(2,3))[o,o,o,v], self.CAS_T3aba)
+
+        self.T3onT2 += -0.5*(X - np.einsum('ijab -> jiab', X))
+
+        self.T3onT2 += + np.einsum('mnef,me,nijfab -> ijab', (self.Vint - self.Vint.swapaxes(2,3))[o,o,v,v], self.CAS_T1, self.CAS_T3aba) \
+                       + np.einsum('mnef,me,njifba -> ijab', (self.Vint - self.Vint.swapaxes(2,3))[o,o,v,v], self.CAS_T1, self.CAS_T3aba) \
+                       + np.einsum('mnef,me,nijfab -> ijab', self.Vint[o,o,v,v], self.CAS_T1, self.CAS_T3aba)                             \
+                       + np.einsum('mnef,me,njifba -> ijab', self.Vint[o,o,v,v], self.CAS_T1, self.CAS_T3aba)                             
+
+        X = np.einsum('mnef, ma, nijfeb -> ijab', self.Vint[o,o,v,v], self.CAS_T1, self.CAS_T3aba) + \
+            np.einsum('mnfe, ma, nijefb -> ijab', self.Vint[o,o,v,v], self.CAS_T1, self.CAS_T3aba) + \
+            np.einsum('mnef, ma, ijnebf -> ijab', (self.Vint - self.Vint.swapaxes(2,3))[o,o,v,v], self.CAS_T1, self.CAS_T3aba)
+
+        self.T3onT2 += - (X - np.einsum('ijab -> ijba', X))
+
+        X = np.einsum('mnef, ie, nmjfab -> ijab', self.Vint[o,o,v,v], self.CAS_T1, self.CAS_T3aba) + \
+            np.einsum('mnfe, ie, mnjfab -> ijab', self.Vint[o,o,v,v], self.CAS_T1, self.CAS_T3aba) + \
+            np.einsum('mnef, ie, mjnabf -> ijab', (self.Vint - self.Vint.swapaxes(2,3))[o,o,v,v], self.CAS_T1, self.CAS_T3aba)
+
+        self.T3onT2 += - (X - np.einsum('ijab -> jiab', X))
 
         # Compute T4 contribution to T2
         
@@ -913,45 +877,41 @@ class HTCCSD:
         #self.T1 = np.zeros([self.ndocc, self.nvir])
         #self.T2  = np.zeros([self.ndocc, self.ndocc, self.nvir, self.nvir])
         
-        #self.cc_energy()
+        self.cc_energy()
 
         print('CC Energy from CAS Amplitudes: {:<5.10f}'.format(self.Ecc+self.Escf))
 
         self.r1 = 1
-        self.r2 = 0 #debug
+        self.r2 = 1
             
         LIM = 10**(-CC_CONV)
         ite = 0
         
-        print('C0: {}'.format(C0))
         self.printcast1(w=True)
         self.printcast2(w=True)
         self.printcast3(w=True)
         self.printcast4(w=True)
         
-       # while self.r2 > LIM or self.r1 > LIM:
-       #     ite += 1
-       #     if ite > CC_MAXITER:
-       #         raise NameError("CC Equations did not converge in {} iterations".format(CC_MAXITER))
-       #     Eold = self.Ecc
-       #     t = time.time()
-       #     self.T1_Update()
-       #     self.cc_energy()
-       #     dE = self.Ecc - Eold
-       #     print('-'*50)
-       #     print("Iteration {}".format(ite))
-       #     print("CC Correlation energy: {}".format(self.Ecc))
-       #     print("Energy change:         {}".format(dE))
-       #     print("T1 Residue:            {}".format(self.r1))
-       #     print("T2 Residue:            {}".format(self.r2))
-       #     print("Time required:         {}".format(time.time() - t))
-       #     print('-'*50)
-       # 
-       # self.Ecc = self.Ecc + self.Escf
-
-       # print("\nTCC Equations Converged!!!")
-       # print("Final TCCSD Energy:     {:<5.10f}".format(self.Ecc))
-       # print("Total Computation time:        {}".format(time.time() - tinit))
-
+        while self.r2 > LIM or self.r1 > LIM:
+            ite += 1
+            if ite > CC_MAXITER:
+                raise NameError("CC Equations did not converge in {} iterations".format(CC_MAXITER))
+            Eold = self.Ecc
+            t = time.time()
+            self.T1_T2_Update()
+            self.cc_energy()
+            dE = self.Ecc - Eold
+            print('-'*50)
+            print("Iteration {}".format(ite))
+            print("CC Correlation energy: {}".format(self.Ecc))
+            print("Energy change:         {}".format(dE))
+            print("T1 Residue:            {}".format(self.r1))
+            print("T2 Residue:            {}".format(self.r2))
+            print("Time required:         {}".format(time.time() - t))
+            print('-'*50)
         
-        
+        self.Ecc = self.Ecc + self.Escf
+
+        print("\nTCC Equations Converged!!!")
+        print("Final TCCSD Energy:     {:<5.10f}".format(self.Ecc))
+        print("Total Computation time:        {}".format(time.time() - tinit))

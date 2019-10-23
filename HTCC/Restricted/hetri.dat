@@ -7,7 +7,7 @@ molecule mol {
     0 1
     He 
     He 1 2.0
-#    He 1 2.0 2 120.0
+    He 1 2.0 2 120.0
     symmetry c1
 }
 
@@ -26,6 +26,4 @@ X = HTCCSD(mol)
 
 X.HTCCSD('full', CC_CONV=8)
 
-print('CAS energy:   {:<5.10f}'.format(X.Ecas))
-print('CCSD Energy:  {:<5.10f}'.format(energy('ccsd')))
-print('CCSDT (MRCC): -5.699483294760')
+print('CCSD Energy: {:<5.10f}'.format(energy('ccsd')))
