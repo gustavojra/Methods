@@ -7,12 +7,11 @@ molecule mol {
     0 1
     He 
     He 1 2.0
-#    He 1 2.0 2 120.0
     symmetry c1
 }
 
 set {
-    BASIS         3-21g
+    BASIS         6-31g
     REFERENCE     RHF
     SCF_TYPE      PK
     SOSCF         True
@@ -24,8 +23,8 @@ set {
 
 X = HTCCSD(mol)
 
-X.HTCCSD('full', CC_CONV=8)
+X.HTCCSD('full', CC_CONV=8, MP2_GUESS=False)
 
 print('CAS energy:   {:<5.10f}'.format(X.Ecas))
 print('CCSD Energy:  {:<5.10f}'.format(energy('ccsd')))
-print('CCSDT (MRCC): -5.699483294760')
+print('CCSDT (MRCC): -5.7381125680')
