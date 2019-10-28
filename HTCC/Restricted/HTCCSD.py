@@ -217,7 +217,7 @@ class HTCCSD:
 
             self.T3onT2sec -= X
 
-            self.T3onT2sec = np.einsum('ijab -> jiba', self.T3onT2sec)
+            self.T3onT2sec += np.einsum('ijab -> jiba', self.T3onT2sec)
 
         ### END
     
@@ -267,12 +267,16 @@ class HTCCSD:
         out = ''
         for i in range(self.ndocc):
             for j in range(self.ndocc):
+                if j > i:
+                    break
                     for a in range(self.nvir):
                         for b in range(self.nvir):
-                                x = self.CAS_T2[i,j,a,b]
-                                if abs(x) > 1e-6:
-                                    out += '{}a {}b -> {}a {}b {:< 5.6f}'.format(i+1,j+1,1+a+self.ndocc,1+b+self.ndocc,x)
-                                    out += '\n'
+                            if b > a:
+                                break 
+                            x = self.CAS_T2[i,j,a,b]
+                            if abs(x) > 1e-6:
+                                out += '{}a {}b -> {}a {}b {:< 5.6f}'.format(i+1,j+1,1+a+self.ndocc,1+b+self.ndocc,x)
+                                out += '\n'
         if w:
             fil = open('t2amps.dat','w') 
             fil.write(out)
@@ -284,10 +288,14 @@ class HTCCSD:
         out = ''
         for i in range(self.ndocc):
             for j in range(self.ndocc):
+                if j > i: break
                 for k in range(self.ndocc):
+                    if k > j: break
                     for a in range(self.nvir):
                         for b in range(self.nvir):
+                            if b > a: break
                             for c in range(self.nvir):
+                                if c > b: break
                                 x = self.CAS_T3aba[i,j,k,a,b,c]
                                 if abs(x) > 1e-6:
                                     out += '{}a {}b {}a -> {}a {}b {}a  {:< 5.6f}'.format(i+1,j+1,k+1,1+a+self.ndocc,1+b+self.ndocc,1+c+self.ndocc,x)
@@ -682,6 +690,29 @@ class HTCCSD:
                           + np.einsum('ic,jb,ka -> ijkabc', self.CAS_T1, self.CAS_T1, self.CAS_T1) 
                              
         # Quadruples
+
+        # DEBUG
+        
+        self.CAS_T4abab[0,0,1,1,0,0,1,1] = 0.000002
+        self.CAS_T4abab[0,1,1,0,0,0,1,1] = 0.000002
+        self.CAS_T4abab[1,0,0,1,0,0,1,1] = 0.000002
+        self.CAS_T4abab[1,1,0,0,0,0,1,1] = 0.000002
+
+        self.CAS_T4abab[0,0,1,1,1,0,0,1] = 0.000002
+        self.CAS_T4abab[0,1,1,0,1,0,0,1] = 0.000002
+        self.CAS_T4abab[1,0,0,1,1,0,0,1] = 0.000002
+        self.CAS_T4abab[1,1,0,0,1,0,0,1] = 0.000002
+
+        self.CAS_T4abab[0,0,1,1,0,1,1,0] = 0.000002
+        self.CAS_T4abab[0,1,1,0,0,1,1,0] = 0.000002
+        self.CAS_T4abab[1,0,0,1,0,1,1,0] = 0.000002
+        self.CAS_T4abab[1,1,0,0,0,1,1,0] = 0.000002
+
+        self.CAS_T4abab[0,0,1,1,1,1,0,0] = 0.000002
+        self.CAS_T4abab[0,1,1,0,1,1,0,0] = 0.000002
+        self.CAS_T4abab[1,0,0,1,1,1,0,0] = 0.000002
+        self.CAS_T4abab[1,1,0,0,1,1,0,0] = 0.000002
+
         ### First case abaa -> abaa
 
         #self.CAS_T4abaa = self.CAS_T4abaa/C0
@@ -819,28 +850,20 @@ class HTCCSD:
         o = slice(0, self.ndocc)
         v = slice(self.ndocc, self.nbf)
 
-        # Compute T3 contribution to T1
+        # Compute T3 contribution to T1. Checked!!
 
-        self.T3onT1 = + np.einsum('mnef,imnaef->ia', (self.Vint - self.Vint.swapaxes(2,3))[o,o,v,v], self.CAS_T3aaa) \
-                      + np.einsum('mnef,mineaf->ia', (self.Vint - self.Vint.swapaxes(2,3))[o,o,v,v], self.CAS_T3aba) \
-                      + 4*np.einsum('mnef,imnaef->ia', self.Vint[o,o,v,v], self.CAS_T3aba) 
-                      #+ np.einsum('mnef,inmafe->ia', self.Vint[o,o,v,v], self.CAS_T3aba) \
-                      #+ np.einsum('mnfe,inmaef->ia', self.Vint[o,o,v,v], self.CAS_T3aba) \
-                      #+ np.einsum('mnfe,imnafe->ia', self.Vint[o,o,v,v], self.CAS_T3aba) 
+        self.T3onT1 = + (1.0/4.0)*np.einsum('mnef,imnaef->ia', (self.Vint - self.Vint.swapaxes(2,3))[o,o,v,v], self.CAS_T3aaa) \
+                      + (1.0/4.0)*np.einsum('mnef,mineaf->ia', (self.Vint - self.Vint.swapaxes(2,3))[o,o,v,v], self.CAS_T3aba) \
+                      + np.einsum('mnef,imnaef->ia', self.Vint[o,o,v,v], self.CAS_T3aba) 
 
-        self.T3onT1 *= (1.0/4.0)
+        # Compute T3 contribution to T2. Checked!! Spin-Integrated equation simplified with permutation operator.
 
-        # Compute T3 contribution to T2
+        self.T3onT2 = +    np.einsum('bmef, ijmaef -> ijab', self.Vint[v,o,v,v], self.CAS_T3aba)                             \
+                      +0.5*np.einsum('bmef, jimeaf -> ijab', (self.Vint - self.Vint.swapaxes(2,3))[v,o,v,v], self.CAS_T3aba) \
+                      -    np.einsum('mnje, imnabe -> ijab', self.Vint[o,o,o,v], self.CAS_T3aba)                             \
+                      -0.5*np.einsum('mnje, minbae -> ijab', (self.Vint - self.Vint.swapaxes(2,3))[o,o,o,v], self.CAS_T3aba)
 
-        X = 2*np.einsum('bmef, ijmaef -> ijab', self.Vint[v,o,v,v], self.CAS_T3aba) + \
-            np.einsum('bmef, jimeaf -> ijab', (self.Vint - self.Vint.swapaxes(2,3))[v,o,v,v], self.CAS_T3aba)
-
-        self.T3onT2 = 0.5*(X + np.einsum('ijab -> jiba', X))
-
-        X = 2*np.einsum('mnje, imnabe -> ijab', self.Vint[o,o,o,v], self.CAS_T3aba) + \
-            np.einsum('mnje, minbae -> ijab', (self.Vint - self.Vint.swapaxes(2,3))[o,o,o,v], self.CAS_T3aba)
-
-        self.T3onT2 += -0.5*(X + np.einsum('ijab -> jiba', X))
+        self.T3onT2 = self.T3onT2 + np.einsum('ijab -> jiba', self.T3onT2) 
 
         ## T1 dependend part
 
@@ -850,24 +873,18 @@ class HTCCSD:
 
         X = np.einsum('mnef, ijmnabef -> ijab', (self.Vint - self.Vint.swapaxes(2,3))[o,o,v,v], X)
 
-        self.T3onT2sec = copy.deepcopy(X)
-
-        X = + np.einsum('me, nijfab -> ijmnabef', self.T1, self.CAS_T3aba) \
+        Y = + np.einsum('me, nijfab -> ijmnabef', self.T1, self.CAS_T3aba) \
             - np.einsum('ma, nijfeb -> ijmnabef', self.T1, self.CAS_T3aba) \
             - np.einsum('ie, nmjfab -> ijmnabef', self.T1, self.CAS_T3aba)
 
-        X = np.einsum('mnef, ijmnabef -> ijab', self.Vint[o,o,v,v], X)
+        Y = np.einsum('mnef, ijmnabef -> ijab', self.Vint[o,o,v,v], Y)
 
-        self.T3onT2sec += X
+        Z = + np.einsum('mb, ijnefa -> ijmnabef', self.T1, self.CAS_T3aba) \
+            - np.einsum('ie, mnjfab -> ijmnabef', self.T1, self.CAS_T3aba) \
 
-        X = - np.einsum('mb, ijnefa -> ijmnabef', self.T1, self.CAS_T3aba) \
-            + np.einsum('ie, mnjfab -> ijmnabef', self.T1, self.CAS_T3aba) \
+        Z = np.einsum('mnfe, ijmnabef -> ijab', self.Vint[o,o,v,v], Z)
 
-        X = np.einsum('mnfe, ijmnabef -> ijab', self.Vint[o,o,v,v], X)
-
-        self.T3onT2sec -= X
-
-        self.T3onT2sec = np.einsum('ijab -> jiba', self.T3onT2sec)
+        self.T3onT2sec = X + Y + Z + np.einsum('ijab -> jiba', X + Y + Z)
 
         # Compute T4 contribution to T2
         
@@ -879,6 +896,7 @@ class HTCCSD:
                       + np.einsum('mnfe, ijmnabfe -> ijab', self.Vint[o,o,v,v], self.CAS_T4abab)    # these terms can prob be condensed into one
         
         self.T4onT2 *= (1.0/4.0)
+        print(self.T4onT2)
 
         # Compute CCSD 
 
