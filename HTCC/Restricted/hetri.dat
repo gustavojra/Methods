@@ -14,8 +14,8 @@ molecule mol {
 set {
     BASIS         6-31g
     REFERENCE     RHF
-    SCF_TYPE      PK
     SOSCF         True
+    SCF_TYPE      PK 
     E_CONVERGENCE 8
     MAXITER       100
     MAX_ATTEMPTS  10
