@@ -17,7 +17,7 @@ def tcompare(t1, t2, t3aaa, t3aba, t4abaa, t4abab, ndocc):
         newx = newx[:-1]
         labels.append(newx)
     
-    out = '{:<30s}   {:<15s}   {:<15s}   {:<15s}'.format('Label', 'MRCC', 'HTCC', 'Difference') + '\n'
+    out = '{:<30s}   {:<15s}   {:<15s}   {:<15s}   {}'.format('Label', 'MRCC', 'HTCC', 'Difference', 'Sign') + '\n'
     
     for q in range(len(values)):
         label = labels[q]
@@ -154,7 +154,11 @@ def tcompare(t1, t2, t3aaa, t3aba, t4abaa, t4abab, ndocc):
                 out += 'UNKNOWN SPIN CASE: {}'.format(label)
                 break
 
-        out += '{:<30s}   {:< 14.10f}   {:< 14.10f}   {:< 14.10f}'.format(label, mrcc_amp, htcc_amp, abs(mrcc_amp-htcc_amp)) + '\n'
+        if mrcc_amp/abs(mrcc_amp) == htcc_amp/abs(htcc_amp):
+            sign = ''
+        else:
+            sign = 'INVERTED'
+        out += '{:<30s}   {:< 14.10f}   {:< 14.10f}   {:< 14.10f}   {}'.format(label, mrcc_amp, htcc_amp, abs(abs(mrcc_amp)-abs(htcc_amp)), sign) + '\n'
 
     output = open('tcompare.out', 'w')
     output.write(out)

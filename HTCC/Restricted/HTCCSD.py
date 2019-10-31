@@ -97,7 +97,7 @@ class HTCCSD:
         perms = set(permutations('1'*n_ac_elec_pair + '0'*(n_ac_orb - n_ac_elec_pair)))
         print("Done.\n")
 
-        # Use the strings to generate Det objects 
+        # Use the strings to generate Det objects. Use second quantization to attribute signs 
 
         self.determinants = []
         progress = 0
@@ -105,7 +105,8 @@ class HTCCSD:
         for p1 in perms:
             for p2 in perms:
                 self.determinants.append(Det(a=template_space.format(*p1), \
-                                             b=template_space.format(*p2)))
+                                             b=template_space.format(*p2), \
+                                                    ref=self.ref,sq=True))
             progress += 1
             showout(progress, len(perms), 50, "Generating Determinants: ", file)
         file.write('\n')
@@ -414,7 +415,7 @@ class HTCCSD:
 
                 index = self.determinants.index(search)
                 # The phase guarentees that the determinant in the CI framework is the same as the one created in the CC framework
-                self.CAS_T1[i,a] = self.Ccas[index]*p
+                self.CAS_T1[i,a] = self.Ccas[index]#*p
 
         # Doubles: Only the case (alpha, beta -> alpha, beta) is necessary
 
@@ -443,7 +444,7 @@ class HTCCSD:
 
                         index = self.determinants.index(search)
                         # The phase guarentees that the determinant in the CI framework is the same as the one created in the CC framework
-                        self.CAS_T2[i,j,a,b] = self.Ccas[index]*p
+                        self.CAS_T2[i,j,a,b] = self.Ccas[index]#*p
 
         # Triples. Two cases are going to be considered: aaa -> aaa, abb -> abb
 
@@ -890,7 +891,7 @@ class HTCCSD:
         self.cc_energy()
         print('CC Energy from CAS Amplitudes: {:<5.10f}'.format(self.Ecc+self.Escf))
 
-        tcompare(self.T1, self.T2, self.CAS_T3aaa, self.CAS_T3aba, self.CAS_T4abaa, self.CAS_T4abab, self.ndocc)
+        #tcompare(self.T1, self.T2, self.CAS_T3aaa, self.CAS_T3aba, self.CAS_T4abaa, self.CAS_T4abab, self.ndocc)
 
         # Guess MP2
 
@@ -935,4 +936,3 @@ class HTCCSD:
         print("\nTCC Equations Converged!!!")
         print("Final TCCSD Energy:     {:<5.10f}".format(self.Ecc))
         print("Total Computation time:        {}".format(time.time() - tinit))
-

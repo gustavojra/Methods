@@ -8,22 +8,40 @@ class Det:
     # For example a = '11100', b = '11100' is a determinant with all electrons in the lowest energy state
     # Now, the determinant a = '11100', b = '11010' represents a singly excited determinant.
 
-    def __init__(self, a='', b=''):
+    def __init__(self, a='', b='', ref = 'none', sq = False):
 
         # Strings are saved as the integer they represent. The order is inverted such that less memory is used for a given string
 
         self.alpha = int(a[::-1], 2)       
         self.beta  = int(b[::-1], 2)
-        self.nmo = len(a)
+        self.order = len(a)
+    
+        # If a reference was given attribute a sign to the determinants
+        if sq:
+            lcre = sorted(self.exclusive(ref))[::-1]
+            lanh = sorted(ref.exclusive(self))
+            molde = ref.copy()
+            for lorb in lanh:
+                molde.anh(lorb)
+            for lorb in lcre:
+                molde.cre(lorb)
+            if molde == self:
+                self.order = molde.order
+            else:
+                raise NameError('Error creating determinant:\n {s}\n Under reference:\n {s}'.format(str(self), str(ref)))
 
     def __str__(self):
         
         # Create a string representation of the determinant. Mostly used for debugging 
 
         out = '---------------\n'
-        out += 'Alpha: ' + np.binary_repr(self.alpha, width=self.nmo)[::-1]
+        out += 'Alpha: ' + np.binary_repr(self.alpha, width=abs(self.order))[::-1]
         out += '\n'    
-        out += 'Beta:  ' + np.binary_repr(self.beta, width=self.nmo)[::-1]
+        out += 'Beta:  ' + np.binary_repr(self.beta, width=abs(self.order))[::-1]
+        if self.order > 0:
+            out += '\n' + '+'
+        else:
+            out += '\n' + '-'
         out += '\n---------------'
         return out
 
@@ -32,28 +50,28 @@ class Det:
         # Returns a list representing alpha electrons. For example: '11100' -> [1, 1, 1, 0, 0]
         # Note: output has left to right ordering
 
-        return np.array([int(x) for x in list(np.binary_repr(self.alpha, width=self.nmo))])[::-1]
+        return np.array([int(x) for x in list(np.binary_repr(self.alpha, width=abs(self.order)))])[::-1]
 
     def beta_list(self):
 
         # Returns a list representing beta electrons. For example: '11100' -> [1, 1, 1, 0, 0]
         # Note: output has left to right ordering
 
-        return np.array([int(x) for x in list(np.binary_repr(self.beta, width=self.nmo))])[::-1]
+        return np.array([int(x) for x in list(np.binary_repr(self.beta, width=abs(self.order)))])[::-1]
 
     def alpha_string(self):
 
         # Returns a string representing alpha electrons
         # Note: output has right to left ordering (as it is stored)
 
-        return np.binary_repr(self.alpha, width=self.nmo)
+        return np.binary_repr(self.alpha, width=abs(self.order))
 
     def beta_string(self):
 
         # Returns a string representing beta electrons
         # Note: output has right to left ordering (as it is stored)
 
-        return np.binary_repr(self.beta, width=self.nmo)
+        return np.binary_repr(self.beta, width=abs(self.order))
 
     def alpha_beta_string(self):
 
@@ -175,10 +193,12 @@ class Det:
         # Determines the phase create when two orbitals are put in maximum coincidence.
         # Just a wrapper around the two functions above
     
+        s1 = self.order/abs(self.order)
+        s2 = another.order/abs(another.order)
         if self - another == 2:
-            return self.sign_dif2(another)        
+            return self.sign_dif2(another)*s1*s2
         if self - another == 4:
-            return self.sign_dif4(another)
+            return self.sign_dif4(another)*s1*s2
         else:
             return 0
 
@@ -211,8 +231,34 @@ class Det:
         return (-1)**count
             
     def anh(self, lorb):
-        pass
         
+        # Anihilate the desired orbital. Changes the phase according to second quantization rules
+        # Input: List [orbital_index, spin (0 = alpha, 1 = beta)]
 
+        [o, s] = lorb
         
+        if s == 0:
+            p = self.sign_del_alpha(o)
+            self.rmv_alpha(o)
+        else:
+            p = self.sign_del_beta(o)
+            self.rmv_beta(o)
+
+        self.order = p*self.order
+
+    def cre(self, lorb):
+        
+        # Create the desired orbital. Changes the phase according to second quantization rules
+        # Input: List [orbital_index, spin (0 = alpha, 1 = beta)]
+
+        [o, s] = lorb
+        
+        if s == 0:
+            p = self.sign_del_alpha(o)
+            self.add_alpha(o)
+        else:
+            p = self.sign_del_beta(o)
+            self.add_beta(o)
+
+        self.order = p*self.order
 
