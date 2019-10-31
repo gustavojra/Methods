@@ -20,8 +20,8 @@ def H_dif0(det1, molint1, molint2):
     
 def H_dif4(det1, det2, molint1, molint2):
     phase = det1.phase(det2)
-    [[o1, s1], [o2, s2]] = det1.Exclusive(det2)
-    [[o3, s3], [o4, s4]] = det2.Exclusive(det1)
+    [[o1, s1], [o2, s2]] = det1.exclusive(det2)
+    [[o3, s3], [o4, s4]] = det2.exclusive(det1)
     if s1 == s3 and s2 == s4:
         J = molint2[o1, o3, o2, o4] 
     else:
@@ -34,8 +34,8 @@ def H_dif4(det1, det2, molint1, molint2):
 
 def H_dif2(det1, det2, molint1, molint2):
 # Use Exclusive to return a list of [orbital, spin] that are present in the first det, but not in the second
-    [o1, s1] = det1.Exclusive(det2)[0]
-    [o2, s2] = det2.Exclusive(det1)[0]
+    [o1, s1] = det1.exclusive(det2)[0]
+    [o2, s2] = det2.exclusive(det1)[0]
     if s1 != s2:  # Check if the different orbitals have same spin  # DONT THINK THIS IS NECESSARY
         return 0
     phase = det1.phase(det2)

@@ -56,3 +56,17 @@ def showout(i, total, size, prefix, file):
     file.write("%s[%s%s] %i/%i\r" % (prefix, "#"*x, "."*(size-x), i, total))
     file.flush()
     
+def compare_amps(t1, t2ab, t3aaa, t3aba, t4abaa, t4abab):
+    with open('mrcc_amps.dat') as mrcc_amps:
+        values = []
+        labels = []
+        for lines in mrcc_amps:
+            line = lines.split(' ', 1)
+            values.append(float(line[0]))
+            labels = line[1:]
+        print(labels)
+            
+    
+
+
+

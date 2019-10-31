@@ -81,14 +81,18 @@ class Det:
         b = bin(self.beta ^ other.beta).count("1")
         return a + b
 
-    def Exclusive(self, other):
+    def exclusive(self, other):
+
+        # Return orbitals occupied in the first det but not in the second
+        # The index returned is positive for alpha electrons and negative for beta electrons
+
         out = []
         a = self.alpha_list() - other.alpha_list()
         for i in np.where(a == 1)[0]:
-            out.append([i, 0])
+            out.append([i,0])
         b = self.beta_list() - other.beta_list()
         for i in np.where(b == 1)[0]:
-            out.append([i, 1])
+            out.append([i,1])
         return out
 
     def copy(self):
@@ -206,6 +210,8 @@ class Det:
 
         return (-1)**count
             
+    def anh(self, lorb):
+        pass
         
 
         
