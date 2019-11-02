@@ -18,17 +18,26 @@ class Det:
     
         # If a reference was given attribute a sign to the determinants
         if sq:
-            lcre = sorted(self.exclusive(ref))[::-1]
-            lanh = sorted(ref.exclusive(self))
+            
+            [creA, creB] = self.exclusive(ref)
+            [anhA, anhB] = ref.exclusive(self)
+            creA = sorted(creA)[::-1]
+            creB = sorted(creB)[::-1]
+            anhA = sorted(anhA)
+            anhB = sorted(anhB)
             molde = ref.copy()
-            for lorb in lanh:
-                molde.anh(lorb)
-            for lorb in lcre:
-                molde.cre(lorb)
+            for orb in anhA:
+                molde.anh(orb, spin=0)
+            for orb in anhB:
+                molde.anh(orb, spin=1)
+            for orb in creB:
+                molde.cre(orb, spin=1)
+            for orb in creA:
+                molde.cre(orb, spin=0)
             if molde == self:
                 self.order = molde.order
             else:
-                raise NameError('Error creating determinant:\n {s}\n Under reference:\n {s}'.format(str(self), str(ref)))
+                raise NameError('Error creating determinant:\n {}\n Under reference:\n {}'.format(str(self), str(ref)))
 
     def __str__(self):
         
@@ -102,16 +111,18 @@ class Det:
     def exclusive(self, other):
 
         # Return orbitals occupied in the first det but not in the second
-        # The index returned is positive for alpha electrons and negative for beta electrons
+        # The output is a list where the first item is a list of alpha orbitals
+        # and the second item is a list of beta orbitals.
 
-        out = []
+        alpha = []
+        beta = []
         a = self.alpha_list() - other.alpha_list()
         for i in np.where(a == 1)[0]:
-            out.append([i,0])
+            alpha.append(i)
         b = self.beta_list() - other.beta_list()
         for i in np.where(b == 1)[0]:
-            out.append([i,1])
-        return out
+            beta.append(i)
+        return [alpha, beta]
 
     def copy(self):
 
@@ -193,12 +204,10 @@ class Det:
         # Determines the phase create when two orbitals are put in maximum coincidence.
         # Just a wrapper around the two functions above
     
-        s1 = self.order/abs(self.order)
-        s2 = another.order/abs(another.order)
         if self - another == 2:
-            return self.sign_dif2(another)*s1*s2
+            return self.sign_dif2(another) * self.sign() * another.sign()
         if self - another == 4:
-            return self.sign_dif4(another)*s1*s2
+            return self.sign_dif4(another) * self.sign() * another.sign()
         else:
             return 0
 
@@ -230,35 +239,36 @@ class Det:
 
         return (-1)**count
             
-    def anh(self, lorb):
+    def anh(self, orb, spin):
         
         # Anihilate the desired orbital. Changes the phase according to second quantization rules
         # Input: List [orbital_index, spin (0 = alpha, 1 = beta)]
 
-        [o, s] = lorb
-        
-        if s == 0:
-            p = self.sign_del_alpha(o)
-            self.rmv_alpha(o)
+        if spin == 0:
+            p = self.sign_del_alpha(orb)
+            self.rmv_alpha(orb)
         else:
-            p = self.sign_del_beta(o)
-            self.rmv_beta(o)
+            p = self.sign_del_beta(orb)
+            self.rmv_beta(orb)
 
         self.order = p*self.order
 
-    def cre(self, lorb):
+    def cre(self, orb, spin):
         
         # Create the desired orbital. Changes the phase according to second quantization rules
         # Input: List [orbital_index, spin (0 = alpha, 1 = beta)]
 
-        [o, s] = lorb
-        
-        if s == 0:
-            p = self.sign_del_alpha(o)
-            self.add_alpha(o)
+        if spin == 0:
+            p = self.sign_del_alpha(orb)
+            self.add_alpha(orb)
         else:
-            p = self.sign_del_beta(o)
-            self.add_beta(o)
+            p = self.sign_del_beta(orb)
+            self.add_beta(orb)
 
         self.order = p*self.order
 
+    def sign(self):
+    
+        # Return the sign of the det
+
+        return self.order/abs(self.order)

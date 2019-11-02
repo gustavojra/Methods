@@ -406,16 +406,15 @@ class HTCCSD:
                 search = self.ref.copy()
             
                 # anh -> i
-                p = search.sign_del_alpha(i)
-                search.rmv_alpha(i)
+                search.anh(i, spin=0)
 
                 # cre -> a
-                p *= search.sign_del_alpha(a+self.ndocc)
-                search.add_alpha(a+self.ndocc)
+                search.cre(a+self.ndocc, spin=0)
 
                 index = self.determinants.index(search)
+                CASdet = self.determinants[index]
                 # The phase guarentees that the determinant in the CI framework is the same as the one created in the CC framework
-                self.CAS_T1[i,a] = self.Ccas[index]#*p
+                self.CAS_T1[i,a] = self.Ccas[index] * search.sign() * CASdet.sign()
 
         # Doubles: Only the case (alpha, beta -> alpha, beta) is necessary
 
@@ -424,27 +423,23 @@ class HTCCSD:
                 for j in self.CAS_holes:
                     for b in self.CAS_particles:
                         search = self.ref.copy()
-                        p = 1
-
-                        # anh -> j
-                        p *= search.sign_del_beta(j)
-                        search.rmv_beta(j)
-
-                        # cre -> b
-                        p *= search.sign_del_beta(b + self.ndocc)
-                        search.add_beta(b + self.ndocc)
 
                         # anh -> i
-                        p *= search.sign_del_alpha(i)
-                        search.rmv_alpha(i)
-                        
+                        search.anh(i, spin=0)
+
+                        # anh -> j
+                        search.anh(j, spin=1)
+
+                        # cre -> b
+                        search.anh(b + self.ndocc, spin=1)
+
                         # cre -> a
-                        p *= search.sign_del_alpha(a + self.ndocc)
-                        search.add_alpha(a + self.ndocc)
+                        search.cre(a + self.ndocc, spin=0)
 
                         index = self.determinants.index(search)
+                        CASdet = self.determinants[index]
                         # The phase guarentees that the determinant in the CI framework is the same as the one created in the CC framework
-                        self.CAS_T2[i,j,a,b] = self.Ccas[index]#*p
+                        self.CAS_T2[i,j,a,b] = self.Ccas[index] * search.sign() * CASdet.sign()
 
         # Triples. Two cases are going to be considered: aaa -> aaa, abb -> abb
 
@@ -462,34 +457,28 @@ class HTCCSD:
                                 if a == b or b == c or a == c:
                                     continue
                                 search = self.ref.copy()
-                                p = 1
 
-                                # anh -> k
-                                p *= search.sign_del_alpha(k)
-                                search.rmv_alpha(k)
+                                # anh -> i (alpha)
+                                search.anh(i, spin=0)
 
-                                # cre -> c
-                                p *= search.sign_del_alpha(c + self.ndocc)
-                                search.add_alpha(c + self.ndocc)
+                                # anh -> j (alpha)
+                                search.anh(j, spin=0)
 
-                                # anh -> j
-                                p *= search.sign_del_alpha(j)
-                                search.rmv_alpha(j)
+                                # anh -> k (alpha)
+                                search.anh(k, spin=0)
 
-                                # cre -> b
-                                p *= search.sign_del_alpha(b + self.ndocc)
-                                search.add_alpha(b + self.ndocc)
+                                # cre -> c (alpha)
+                                search.cre(c + self.ndocc, spin=0)
 
-                                # anh -> i
-                                p *= search.sign_del_alpha(i)
-                                search.rmv_alpha(i)
+                                # cre -> b (alpha)
+                                search.cre(b + self.ndocc, spin=0)
 
-                                # cre -> a
-                                p *= search.sign_del_alpha(a + self.ndocc)
-                                search.add_alpha(a + self.ndocc)
+                                # cre -> a (alpha)
+                                search.cre(a + self.ndocc, spin=0)
 
                                 index = self.determinants.index(search)
-                                self.CAS_T3aaa[i,j,k,a,b,c] = self.Ccas[index]*p
+                                CASdet = self.determinants[index]
+                                self.CAS_T3aaa[i,j,k,a,b,c] = self.Ccas[index] * search.sign() * CASdet.sign()
 
         # Second Case: aba -> aba
 
@@ -503,34 +492,28 @@ class HTCCSD:
                                 if i == k or a == c:
                                     continue
                                 search = self.ref.copy()
-                                p = 1
 
-                                # anh -> k
-                                p *= search.sign_del_alpha(k)
-                                search.rmv_alpha(k)
+                                # anh -> i (alpha)
+                                search.anh(i, spin=0)
 
-                                # cre -> c
-                                p *= search.sign_del_alpha(c + self.ndocc)
-                                search.add_alpha(c + self.ndocc)
+                                # anh -> j (beta)
+                                search.anh(j, spin=1)
 
-                                # anh -> j
-                                p *= search.sign_del_beta(j)
-                                search.rmv_beta(j)
+                                # anh -> k (alpha)
+                                search.anh(k, spin=0)
 
-                                # cre -> b
-                                p *= search.sign_del_beta(b + self.ndocc)
-                                search.add_beta(b + self.ndocc)
+                                # cre -> c (alpha)
+                                search.cre(c + self.ndocc, spin=0)
 
-                                # anh -> i
-                                p *= search.sign_del_alpha(i)
-                                search.rmv_alpha(i)
+                                # cre -> b (beta)
+                                search.cre(b + self.ndocc, spin=1)
 
-                                # cre -> a
-                                p *= search.sign_del_alpha(a + self.ndocc)
-                                search.add_alpha(a + self.ndocc)
+                                # cre -> a (alpha)
+                                search.cre(a + self.ndocc, spin=0)
 
                                 index = self.determinants.index(search)
-                                self.CAS_T3aba[i,j,k,a,b,c] = self.Ccas[index]*p
+                                CASdet = self.determinants[index]
+                                self.CAS_T3aba[i,j,k,a,b,c] = self.Ccas[index] * search.sign() * CASdet.sign()
 
         # Quadruples 
 
@@ -550,42 +533,34 @@ class HTCCSD:
                                         if a == c or a == d or c == d:
                                             continue
                                         search = self.ref.copy()
-                                        p = 1
 
-                                        # anh -> l
-                                        p *= search.sign_del_alpha(l)
-                                        search.rmv_alpha(l)
+                                        # anh -> i (alpha)
+                                        search.anh(i, spin=0)
 
-                                        # cre -> d
-                                        p *= search.sign_del_alpha(d + self.ndocc)
-                                        search.add_alpha(d + self.ndocc)
+                                        # anh -> j (beta)
+                                        search.anh(j, spin=1)
 
-                                        # anh -> k
-                                        p *= search.sign_del_alpha(k)
-                                        search.rmv_alpha(k)
+                                        # anh -> k (alpha)
+                                        search.anh(k, spin=0)
 
-                                        # cre -> c
-                                        p *= search.sign_del_alpha(c + self.ndocc)
-                                        search.add_alpha(c + self.ndocc)
+                                        # anh -> l (alpha)
+                                        search.anh(l, spin=0)
 
-                                        # anh -> j
-                                        p *= search.sign_del_beta(j)
-                                        search.rmv_beta(j)
+                                        # cre -> d (alpha)
+                                        search.cre(d + self.ndocc, spin=0)
 
-                                        # cre -> b
-                                        p *= search.sign_del_beta(b + self.ndocc)
-                                        search.add_beta(b + self.ndocc)
+                                        # cre -> c (alpha)
+                                        search.cre(c + self.ndocc, spin=0)
 
-                                        # anh -> i
-                                        p *= search.sign_del_alpha(i)
-                                        search.rmv_alpha(i)
+                                        # cre -> b (beta)
+                                        search.cre(b + self.ndocc, spin=1)
 
-                                        # cre -> a
-                                        p *= search.sign_del_alpha(a + self.ndocc)
-                                        search.add_alpha(a + self.ndocc)
+                                        # cre -> a (alpha)
+                                        search.cre(a + self.ndocc, spin=0)
 
                                         index = self.determinants.index(search)
-                                        self.CAS_T4abaa[i,j,k,l,a,b,c,d] = self.Ccas[index]*p
+                                        CASdet = self.determinants[index]
+                                        self.CAS_T4abaa[i,j,k,l,a,b,c,d] = self.Ccas[index] * search.sign() * CASdet.sign()
 
         ## Second case: abab -> abab
 
@@ -603,42 +578,34 @@ class HTCCSD:
                                         if a == c or b == d:
                                             continue
                                         search = self.ref.copy()
-                                        p = 1
 
-                                        # anh -> l
-                                        p *= search.sign_del_beta(l)
-                                        search.rmv_beta(l)
+                                        # anh -> i (alpha)
+                                        search.anh(i, spin=0)
 
-                                        # cre -> d
-                                        p *= search.sign_del_beta(d + self.ndocc)
-                                        search.add_beta(d + self.ndocc)
+                                        # anh -> j (beta)
+                                        search.anh(j, spin=1)
 
-                                        # anh -> k
-                                        p *= search.sign_del_alpha(k)
-                                        search.rmv_alpha(k)
+                                        # anh -> k (alpha)
+                                        search.anh(k, spin=0)
 
-                                        # cre -> c
-                                        p *= search.sign_del_alpha(c + self.ndocc)
-                                        search.add_alpha(c + self.ndocc)
+                                        # anh -> l (beta)
+                                        search.anh(l, spin=1)
 
-                                        # anh -> j
-                                        p *= search.sign_del_beta(j)
-                                        search.rmv_beta(j)
+                                        # cre -> d (beta)
+                                        search.cre(d + self.ndocc, spin=1)
 
-                                        # cre -> b
-                                        p *= search.sign_del_beta(b + self.ndocc)
-                                        search.add_beta(b + self.ndocc)
+                                        # cre -> c (alpha)
+                                        search.cre(c + self.ndocc, spin=0)
 
-                                        # anh -> i
-                                        p *= search.sign_del_alpha(i)
-                                        search.rmv_alpha(i)
+                                        # cre -> b (beta)
+                                        search.cre(b + self.ndocc, spin=1)
 
-                                        # cre -> a
-                                        p *= search.sign_del_alpha(a + self.ndocc)
-                                        search.add_alpha(a + self.ndocc)
+                                        # cre -> a (alpha)
+                                        search.cre(a + self.ndocc, spin=0)
 
                                         index = self.determinants.index(search)
-                                        self.CAS_T4abab[i,j,k,l,a,b,c,d] = self.Ccas[index]*p
+                                        CASdet = self.determinants[index]
+                                        self.CAS_T4abab[i,j,k,l,a,b,c,d] = self.Ccas[index] * search.sign() * CASdet.sign()
 
         # Translate CI coefficients into CC amplitudes
 
@@ -654,20 +621,23 @@ class HTCCSD:
         self.CAS_T3aaa = self.CAS_T3aaa
 
         T2aa = self.CAS_T2 - np.einsum('ijab -> jiab', self.CAS_T2)
+        print('Test t2aa')
+        print(T2aa[0,1,0,1])
+        print(T2aa[1,0,0,1])
+        print(T2aa[0,1,1,0])
+        print(T2aa[1,0,1,0])
 
-        self.CAS_T3aaa -=   + np.einsum('ia,jkbc ->ijkabc',self.CAS_T1,T2aa)  - np.einsum('ib,jkac -> ijkabc', self.CAS_T1,T2aa) + np.einsum('ic,jkab -> ijkabc', self.CAS_T1,T2aa) \
-                            - np.einsum('ja,ikbc ->ijkabc',self.CAS_T1,T2aa)  + np.einsum('jb,ikac -> ijkabc', self.CAS_T1,T2aa) - np.einsum('jc,ikab -> ijkabc', self.CAS_T1,T2aa) \
-                            + np.einsum('ka,ijbc ->ijkabc',self.CAS_T1,T2aa)  - np.einsum('kb,ijac -> ijkabc', self.CAS_T1,T2aa) + np.einsum('kc,ijab -> ijkabc', self.CAS_T1,T2aa) 
+        self.CAS_T3aaa += - np.einsum('ia,jkbc ->ijkabc',self.CAS_T1,T2aa)  + np.einsum('ib,jkac -> ijkabc', self.CAS_T1,T2aa) - np.einsum('ic,jkab -> ijkabc', self.CAS_T1,T2aa) \
+                          + np.einsum('ja,ikbc ->ijkabc',self.CAS_T1,T2aa)  - np.einsum('jb,ikac -> ijkabc', self.CAS_T1,T2aa) + np.einsum('jc,ikab -> ijkabc', self.CAS_T1,T2aa) \
+                          - np.einsum('ka,ijbc ->ijkabc',self.CAS_T1,T2aa)  + np.einsum('kb,ijac -> ijkabc', self.CAS_T1,T2aa) - np.einsum('kc,ijab -> ijkabc', self.CAS_T1,T2aa) 
 
-        self.CAS_T3aaa -= + np.einsum('ia,jb,kc -> ijkabc', self.CAS_T1,self.CAS_T1,self.CAS_T1) - np.einsum('ia,jc,kb -> ijkabc', self.CAS_T1,self.CAS_T1,self.CAS_T1) \
-                          - np.einsum('ib,ja,kc -> ijkabc', self.CAS_T1,self.CAS_T1,self.CAS_T1) + np.einsum('ib,jc,ka -> ijkabc', self.CAS_T1,self.CAS_T1,self.CAS_T1) \
-                          + np.einsum('ic,ja,kb -> ijkabc', self.CAS_T1,self.CAS_T1,self.CAS_T1) - np.einsum('ic,jb,ka -> ijkabc', self.CAS_T1,self.CAS_T1,self.CAS_T1) 
+        self.CAS_T3aaa += - np.einsum('ia,jb,kc -> ijkabc', self.CAS_T1,self.CAS_T1,self.CAS_T1) + np.einsum('ia,jc,kb -> ijkabc', self.CAS_T1,self.CAS_T1,self.CAS_T1) \
+                          + np.einsum('ib,ja,kc -> ijkabc', self.CAS_T1,self.CAS_T1,self.CAS_T1) - np.einsum('ib,jc,ka -> ijkabc', self.CAS_T1,self.CAS_T1,self.CAS_T1) \
+                          - np.einsum('ic,ja,kb -> ijkabc', self.CAS_T1,self.CAS_T1,self.CAS_T1) + np.einsum('ic,jb,ka -> ijkabc', self.CAS_T1,self.CAS_T1,self.CAS_T1) 
 
         ## Second case aba -> aba
 
-        self.CAS_T3aba = self.CAS_T3aba
-
-        self.CAS_T3aba += - np.einsum('ia,kjcb -> ijkabc', self.CAS_T1, self.CAS_T2) \
+        self.CAS_T3aba += - np.einsum('ia,jkbc -> ijkabc', self.CAS_T1, self.CAS_T2) \
                           + np.einsum('ic,kjab -> ijkabc', self.CAS_T1, self.CAS_T2) \
                           + np.einsum('ka,ijcb -> ijkabc', self.CAS_T1, self.CAS_T2) \
                           - np.einsum('kc,ijab -> ijkabc', self.CAS_T1, self.CAS_T2) \
@@ -817,7 +787,7 @@ class HTCCSD:
         o = slice(0, self.ndocc)
         v = slice(self.ndocc, self.nbf)
 
-        # Compute T3 contribution to T1. Checked!!
+        # Compute T3 contribution to T1. Checked!! PRETTY SURE THIS IS CORRECT!
 
         self.T3onT1 = + (1.0/4.0)*np.einsum('mnef,imnaef->ia', (self.Vint - self.Vint.swapaxes(2,3))[o,o,v,v], self.CAS_T3aaa) \
                       + (1.0/4.0)*np.einsum('mnef,mineaf->ia', (self.Vint - self.Vint.swapaxes(2,3))[o,o,v,v], self.CAS_T3aba) \
@@ -891,7 +861,7 @@ class HTCCSD:
         self.cc_energy()
         print('CC Energy from CAS Amplitudes: {:<5.10f}'.format(self.Ecc+self.Escf))
 
-        #tcompare(self.T1, self.T2, self.CAS_T3aaa, self.CAS_T3aba, self.CAS_T4abaa, self.CAS_T4abab, self.ndocc)
+        tcompare(self.T1, self.T2, self.CAS_T3aaa, self.CAS_T3aba, self.CAS_T4abaa, self.CAS_T4abab, self.ndocc)
 
         # Guess MP2
 

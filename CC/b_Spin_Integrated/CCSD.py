@@ -103,9 +103,8 @@ def CCSD_Iter(T1, T2, EINSUMOPT='optimal'):
 
 water = psi4.geometry("""
     0 1
-    O
-    H 1 0.96
-    H 1 0.96 2 104.5
+    He 
+    He 1 2.0
     symmetry c1
 """)
 
@@ -133,7 +132,7 @@ water = psi4.geometry("""
 
 # Basis set
 
-basis = 'sto-3g'
+basis = 'cc-pvdz'
 
 # Psi4 Options
 

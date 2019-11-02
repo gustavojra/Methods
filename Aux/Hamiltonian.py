@@ -20,28 +20,39 @@ def H_dif0(det1, molint1, molint2):
     
 def H_dif4(det1, det2, molint1, molint2):
     phase = det1.phase(det2)
-    [[o1, s1], [o2, s2]] = det1.exclusive(det2)
-    [[o3, s3], [o4, s4]] = det2.exclusive(det1)
-    if s1 == s3 and s2 == s4:
-        J = molint2[o1, o3, o2, o4] 
+    [alp1, bet1] = det1.exclusive(det2)
+    [alp2, bet2] = det2.exclusive(det1)
+    if len(alp1) != len(alp2):
+        return 0
+    [o1,o2,o3,o4] = alp1 + bet1 + alp2 + bet2
+    if len(alp1) == 1:
+        return phase * (molint2[o1,o3,o2,o4])
     else:
-        J = 0
-    if s1 == s4 and s2 == s3:
-        K = molint2[o1, o4, o2, o3]
-    else:
-        K = 0
-    return phase * (J - K)
+        return phase * (molint2[o1,o3,o2,o4] - molint2[o1,o4,o2,o3])
+
+    #[[o1, s1], [o2, s2]] = det1.exclusive(det2)
+    #[[o3, s3], [o4, s4]] = det2.exclusive(det1)
+    #if s1 == s3 and s2 == s4:
+    #    J = molint2[o1, o3, o2, o4] 
+    #else:
+    #    J = 0
+    #if s1 == s4 and s2 == s3:
+    #    K = molint2[o1, o4, o2, o3]
+    #else:
+    #    K = 0
+    #return phase * (J - K)
 
 def H_dif2(det1, det2, molint1, molint2):
-# Use Exclusive to return a list of [orbital, spin] that are present in the first det, but not in the second
-    [o1, s1] = det1.exclusive(det2)[0]
-    [o2, s2] = det2.exclusive(det1)[0]
-    if s1 != s2:  # Check if the different orbitals have same spin  # DONT THINK THIS IS NECESSARY
-        return 0
+    # Use exclusive to return a list of alpha and beta orbitals present in the first det, but no in the second 
+    [alp1, bet1] = det1.exclusive(det2)
+    [alp2, bet2] = det2.exclusive(det1)
+ #   if len(alp1) != len(alp2):  # Check if the different orbitals have same spin  # DONT THINK THIS IS NECESSARY
+ #       return 0
     phase = det1.phase(det2)
+    [o1, o2] = alp1 + bet1 + alp2 + bet2
     # For J, (mp|nn), n can have any spin. Two cases are considered then. Obs: det1.occ or det2.occ would yield the same result. When n = m or p J - K = 0
     J = np.einsum('nn, n->', molint2[o1,o2], det1.alpha_list()) + np.einsum('nn, n->', molint2[o1,o2], det1.beta_list()) 
-    if s1 == 0:
+    if len(alp1) > 0:
         K = np.einsum('nn, n->', molint2.swapaxes(1,3)[o1,o2], det1.alpha_list())
     else:
         K = np.einsum('nn, n->', molint2.swapaxes(1,3)[o1,o2], det1.beta_list())

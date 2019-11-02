@@ -23,9 +23,9 @@
     -----------------------------------------------------------------------
 
 
-    Psi4 started on: Friday, 01 November 2019 06:11PM
+    Psi4 started on: Friday, 01 November 2019 02:11PM
 
-    Process ID: 92568
+    Process ID: 90003
     Host:       Mac-mini-3.local
     PSIDATADIR: /Users/aroeira/psi4conda/share/psi4
     Memory:     500.0 MiB
@@ -37,44 +37,68 @@
 import os
 import sys
 import numpy as np
-from HTCCSD import HTCCSD
+from TCCSD import TCCSD
 
-molecule mol {
+temp = """
+    unit bohr
     0 1
-    He 
-    He 1 2.0
-    He 1 2.0 2 120.0
+    O
+    H 1 {:<1.5f}
+    H 1 {:<1.5f} 2 104.52
     symmetry c1
-}
+"""
 
 set {
-    BASIS         cc-pvdz
+    BASIS         sto-3g
     REFERENCE     RHF
+    SCF_TYPE      PK
     SOSCF         True
-    SCF_TYPE      PK 
     E_CONVERGENCE 8
     MAXITER       100
     MAX_ATTEMPTS  10
     GUESS         READ
 }
 
-X = HTCCSD(mol)
+e = []
+ecas = []
 
-X.HTCCSD('full', CC_CONV=8)
+#ratios = np.array(range(7,38,1))/10.0
+ratios = [1]
 
-print('CAS energy:   {:<5.10f}'.format(X.Ecas))
-print('CCSD Energy:  {:<5.10f}'.format(energy('ccsd')))
+line = '{:<2.2f}   {:<5.10f}   {:<5.10f}'
+
+for r in ratios:
+    print('!!@!! Running {}'.format(r))
+    Re = 1.809*r
+    mol = geometry(temp.format(Re, Re))
+    X = TCCSD(mol)
+    X.TCCSD(active_space='full', CC_MAXITER=100)
+    e.append(X.Ecc)
+    ecas.append(X.Ecas)
+    print_out('!!@!! ' + line.format(r, ecas[-1], e[-1]))
+    
+out = ''
+
+for i in range(len(ratios)):
+    out += line.format(ratios[i],ecas[i],e[i])
+    out += '\n'
+    
+output = open('uhf.dat', 'w')
+output.write(out)
+output.close()
+
 --------------------------------------------------------------------------
 
 *** tstart() called on Mac-mini-3.local
-*** at Fri Nov  1 18:11:48 2019
+*** at Fri Nov  1 14:11:56 2019
 
    => Loading Basis Set <=
 
-    Name: CC-PVDZ
+    Name: STO-3G
     Role: ORBITAL
     Keyword: BASIS
-    atoms 1-3 entry HE         line    32 file /Users/aroeira/psi4conda/share/psi4/basis/cc-pvdz.gbs 
+    atoms 1   entry O          line    81 file /Users/aroeira/psi4conda/share/psi4/basis/sto-3g.gbs 
+    atoms 2-3 entry H          line    19 file /Users/aroeira/psi4conda/share/psi4/basis/sto-3g.gbs 
 
 
          ---------------------------------------------------------
@@ -90,25 +114,25 @@ print('CCSD Energy:  {:<5.10f}'.format(energy('ccsd')))
     Molecular point group: c1
     Full point group: C2v
 
-    Geometry (in Angstrom), charge = 0, multiplicity = 1:
+    Geometry (in Bohr), charge = 0, multiplicity = 1:
 
        Center              X                  Y                   Z               Mass       
     ------------   -----------------  -----------------  -----------------  -----------------
-         HE           0.000000000000     0.000000000000    -0.666666666667     4.002603254130
-         HE           0.000000000000    -1.732050807569     0.333333333333     4.002603254130
-         HE           0.000000000000     1.732050807569     0.333333333333     4.002603254130
+         O            0.000000000000     0.000000000000    -0.123917899933    15.994914619570
+         H            0.000000000000    -1.430550712516     0.983333498315     1.007825032230
+         H            0.000000000000     1.430550712516     0.983333498315     1.007825032230
 
   Running in c1 symmetry.
 
-  Rotational constants: A =      6.31750  B =      0.70194  C =      0.63175 [cm^-1]
-  Rotational constants: A = 189393.86823  B =  21043.76314  C =  18939.38682 [MHz]
-  Nuclear repulsion =    2.727750052738680
+  Rotational constants: A =     27.43039  B =     14.59394  C =      9.52585 [cm^-1]
+  Rotational constants: A = 822342.48037  B = 437515.33630  C = 285577.81846 [MHz]
+  Nuclear repulsion =    9.194181307449954
 
   Charge       = 0
   Multiplicity = 1
-  Electrons    = 6
-  Nalpha       = 3
-  Nbeta        = 3
+  Electrons    = 10
+  Nalpha       = 5
+  Nbeta        = 5
 
   ==> Algorithm <==
 
@@ -123,11 +147,11 @@ print('CCSD Energy:  {:<5.10f}'.format(energy('ccsd')))
 
   ==> Primary Basis <==
 
-  Basis Set: CC-PVDZ
-    Blend: CC-PVDZ
-    Number of shells: 9
-    Number of basis function: 15
-    Number of Cartesian functions: 15
+  Basis Set: STO-3G
+    Blend: STO-3G
+    Number of shells: 5
+    Number of basis function: 7
+    Number of Cartesian functions: 7
     Spherical Harmonics?: true
     Max angular momentum: 1
 
@@ -137,9 +161,9 @@ print('CCSD Energy:  {:<5.10f}'.format(energy('ccsd')))
    -------------------------------------------------------
     Irrep   Nso     Nmo     Nalpha   Nbeta   Ndocc  Nsocc
    -------------------------------------------------------
-     A         15      15       0       0       0       0
+     A          7       7       0       0       0       0
    -------------------------------------------------------
-    Total      15      15       3       3       3       0
+    Total       7       7       5       5       5       0
    -------------------------------------------------------
 
   ==> Integral Setup <==
@@ -147,18 +171,18 @@ print('CCSD Energy:  {:<5.10f}'.format(energy('ccsd')))
   Using in-core PK algorithm.
    Calculation information:
       Number of atoms:                   3
-      Number of AO shells:               9
+      Number of AO shells:               5
       Number of primitives:             15
-      Number of atomic orbitals:        15
-      Number of basis functions:        15
+      Number of atomic orbitals:         7
+      Number of basis functions:         7
 
       Integral cutoff                 1.00e-12
       Number of threads:                 1
 
   Performing in-core PK
-  Using 14520 doubles for integral storage.
-  We computed 941 shell quartets total.
-  Whereas there are 1035 unique shell quartets.
+  Using 812 doubles for integral storage.
+  We computed 120 shell quartets total.
+  Whereas there are 120 unique shell quartets.
 
   ==> DiskJK: Disk-Based J/K Matrices <==
 
@@ -170,7 +194,7 @@ print('CCSD Energy:  {:<5.10f}'.format(energy('ccsd')))
 
     OpenMP threads:              1
 
-  Minimum eigenvalue in the overlap matrix is 3.0217798440E-01.
+  Minimum eigenvalue in the overlap matrix is 3.4226570888E-01.
   Using Symmetric Orthogonalization.
 
   SCF Guess: Superposition of Atomic Densities via on-the-fly atomic UHF.
@@ -179,11 +203,12 @@ print('CCSD Energy:  {:<5.10f}'.format(energy('ccsd')))
 
                         Total Energy        Delta E     RMS |[F,P]|
 
-   @RHF iter SAD:    -8.57086059491598   -8.57086e+00   0.00000e+00 
-   @RHF iter   1:    -8.56141555280603    9.44504e-03   1.66236e-04 DIIS
-   @RHF iter   2:    -8.56141761312440   -2.06032e-06   1.43763e-05 DIIS
-   @RHF iter   3:    -8.56141762922139   -1.60970e-08   1.92076e-07 SOSCF, nmicro=3
-   @RHF iter   4:    -8.56141762922530   -3.91154e-12   7.03301e-11 SOSCF, nmicro=conv
+   @RHF iter SAD:   -74.22204809062141   -7.42220e+01   0.00000e+00 
+   @RHF iter   1:   -74.91362273639132   -6.91575e-01   3.54694e-02 DIIS
+   @RHF iter   2:   -74.96201882407394   -4.83961e-02   5.35057e-03 DIIS
+   @RHF iter   3:   -74.96287054326200   -8.51719e-04   1.26533e-03 SOSCF, nmicro=4
+   @RHF iter   4:   -74.96294002784553   -6.94846e-05   2.83750e-06 SOSCF, nmicro=5
+   @RHF iter   5:   -74.96294002825698   -4.11447e-10   2.07960e-11 SOSCF, nmicro=conv
   Energy and wave function converged.
 
 
@@ -194,27 +219,25 @@ print('CCSD Energy:  {:<5.10f}'.format(energy('ccsd')))
 
     Doubly Occupied:                                                      
 
-       1A     -0.944338     2A     -0.913835     3A     -0.881869  
+       1A    -20.241749     2A     -1.268367     3A     -0.617891  
+       4A     -0.452985     5A     -0.391239  
 
     Virtual:                                                              
 
-       4A      1.260202     5A      1.391805     6A      1.600097  
-       7A      2.509464     8A      2.522869     9A      2.523392  
-      10A      2.525003    11A      2.525005    12A      2.525920  
-      13A      2.527130    14A      2.566677    15A      2.577154  
+       6A      0.605592     7A      0.742302  
 
     Final Occupation by Irrep:
               A 
-    DOCC [     3 ]
+    DOCC [     5 ]
 
-  @RHF Final Energy:    -8.56141762922530
+  @RHF Final Energy:   -74.96294002825698
 
    => Energetics <=
 
-    Nuclear Repulsion Energy =              2.7277500527386800
-    One-Electron Energy =                 -17.0982519815279872
-    Two-Electron Energy =                   5.8090842995640077
-    Total Energy =                         -8.5614176292252999
+    Nuclear Repulsion Energy =              9.1941813074499539
+    One-Electron Energy =                -122.3697814415392457
+    Two-Electron Energy =                  38.2126601058323274
+    Total Energy =                        -74.9629400282569662
 
 Computation Completed
 
@@ -224,24 +247,29 @@ Properties will be evaluated at   0.000000,   0.000000,   0.000000 [a0]
 Properties computed using the SCF density matrix
 
   Nuclear Dipole Moment: [e a0]
-     X:     0.0000      Y:     0.0000      Z:     0.0000
+     X:     0.0000      Y:    -0.0000      Z:     0.9753
 
   Electronic Dipole Moment: [e a0]
-     X:    -0.0000      Y:     0.0000      Z:    -0.0001
+     X:     0.0000      Y:     0.0000      Z:    -0.2964
 
   Dipole Moment: [e a0]
-     X:    -0.0000      Y:     0.0000      Z:    -0.0001     Total:     0.0001
+     X:     0.0000      Y:     0.0000      Z:     0.6789     Total:     0.6789
 
   Dipole Moment: [D]
-     X:    -0.0000      Y:     0.0000      Z:    -0.0001     Total:     0.0001
+     X:     0.0000      Y:     0.0000      Z:     1.7257     Total:     1.7257
 
 
-*** tstop() called on Mac-mini-3.local at Fri Nov  1 18:11:49 2019
+*** tstop() called on Mac-mini-3.local at Fri Nov  1 14:11:56 2019
 Module time:
-	user time   =       0.28 seconds =       0.00 minutes
-	system time =       0.01 seconds =       0.00 minutes
-	total time  =          1 seconds =       0.02 minutes
+	user time   =       0.29 seconds =       0.00 minutes
+	system time =       0.02 seconds =       0.00 minutes
+	total time  =          0 seconds =       0.00 minutes
 Total time:
-	user time   =       0.28 seconds =       0.00 minutes
-	system time =       0.01 seconds =       0.00 minutes
-	total time  =          1 seconds =       0.02 minutes
+	user time   =       0.29 seconds =       0.00 minutes
+	system time =       0.02 seconds =       0.00 minutes
+	total time  =          0 seconds =       0.00 minutes
+!! C0 value 0.9867177687!!@!! 1.00   -75.0124258090   -75.0124258090
+    Psi4 stopped on: Friday, 01 November 2019 02:12PM
+    Psi4 wall time for execution: 0:00:07.88
+
+*** Psi4 exiting successfully. Buy a developer a beer!

@@ -104,7 +104,8 @@ class TCCSD:
         for p1 in perms:
             for p2 in perms:
                 self.determinants.append(Det(a=template_space.format(*p1), \
-                                             b=template_space.format(*p2)))
+                                             b=template_space.format(*p2), \
+                                                    ref=self.ref, sq=True))
             progress += 1
             showout(progress, len(perms), 50, "Generating Determinants: ", file)
         file.write('\n')
@@ -307,16 +308,14 @@ class TCCSD:
                 search = self.ref.copy()
             
                 # anh -> i
-                p = search.sign_del_alpha(i)
                 search.rmv_alpha(i)
 
                 # cre -> a
-                p *= search.sign_del_alpha(a+self.ndocc)
                 search.add_alpha(a+self.ndocc)
 
                 index = self.determinants.index(search)
-                # The phase guarentees that the determinant in the CI framework is the same as the one created in the CC framework
-                self.internal_T1[i,a] = self.Ccas[index]*p
+
+                self.internal_T1[i,a] = self.Ccas[index]
 
         # Doubles
 
@@ -325,26 +324,22 @@ class TCCSD:
                 for j in self.CAS_holes:
                     for b in self.CAS_particles:
                         search = self.ref.copy()
-                        p = 1
+
                         # anh -> j
-                        p *= search.sign_del_beta(j)
                         search.rmv_beta(j)
 
                         # cre -> b
-                        p *= search.sign_del_beta(b + self.ndocc)
                         search.add_beta(b + self.ndocc)
 
                         # anh -> i
-                        p *= search.sign_del_alpha(i)
                         search.rmv_alpha(i)
 
                         # cre -> a
-                        p *= search.sign_del_alpha(a + self.ndocc)
                         search.add_alpha(a + self.ndocc)
 
                         index = self.determinants.index(search)
                         # The phase guarentees that the determinant in the CI framework is the same as the one created in the CC framework
-                        self.internal_T2[i,j,a,b] = self.Ccas[index]*p
+                        self.internal_T2[i,j,a,b] = self.Ccas[index]
 
         # Translate CI coefficients into CC amplitudes
 
