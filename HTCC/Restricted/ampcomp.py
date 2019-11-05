@@ -147,12 +147,17 @@ def tcompare(t1, t2, t3aaa, t3aba, t4abaa, t4abab, ndocc):
             # Spin case a a b b -> a a b b 
             if len(set([k_spin, l_spin, c_spin, d_spin])) == 1 and len(set([a_spin, b_spin, i_spin, j_spin])) == 1:
                 htcc_amp = t4abab[i,k,j,l,a,c,b,d]
+            # Spin case a b b b -> a b b b
             elif len(set([j_spin, k_spin, l_spin, b_spin, c_spin, d_spin])) == 1:
                 htcc_amp = t4abaa[j,i,k,l,b,a,c,d]
-
+            # Spin case a a a b -> a a a b
+            elif len(set([i_spin, j_spin, k_spin, a_spin, b_spin, c_spin])) == 1 and len(set([l_spin, d_spin])) ==1:
+                htcc_amp = t4abaa[i,l,j,k,a,d,b,c]
             else:
                 out += 'UNKNOWN SPIN CASE: {}'.format(label)
                 break
+        else:
+            continue
 
         if mrcc_amp/abs(mrcc_amp) == htcc_amp/abs(htcc_amp):
             sign = ''
