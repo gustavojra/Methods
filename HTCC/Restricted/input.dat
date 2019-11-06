@@ -11,7 +11,7 @@ molecule mol {
 }
 
 set {
-    BASIS         cc-pvdz
+    BASIS         6-31g
     REFERENCE     RHF
     SCF_TYPE      PK
     SOSCF         True
