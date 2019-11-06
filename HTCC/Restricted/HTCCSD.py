@@ -866,7 +866,7 @@ class HTCCSD:
         self.r2 = 1
             
         LIM = 10**(-CC_CONV)
-        ite = 0
+        ite = 0 + 0
         
         self.printcast1(w=True)
         self.printcast2(w=True)
