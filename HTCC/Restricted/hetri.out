@@ -23,9 +23,9 @@
     -----------------------------------------------------------------------
 
 
-    Psi4 started on: Wednesday, 06 November 2019 04:01PM
+    Psi4 started on: Wednesday, 06 November 2019 06:24PM
 
-    Process ID: 1774
+    Process ID: 3182
     Host:       Mac-mini-3.local
     PSIDATADIR: /Users/aroeira/psi4conda/share/psi4
     Memory:     500.0 MiB
@@ -60,14 +60,14 @@ set {
 
 X = HTCCSD(mol)
 
-X.HTCCSD('full', CC_CONV=8)
+X.HTCCSD('full', CC_CONV=12)
 
 print('CAS energy:   {:<5.10f}'.format(X.Ecas))
 print('CCSD Energy:  {:<5.10f}'.format(energy('ccsd')))
 --------------------------------------------------------------------------
 
 *** tstart() called on Mac-mini-3.local
-*** at Wed Nov  6 16:01:33 2019
+*** at Wed Nov  6 18:24:16 2019
 
    => Loading Basis Set <=
 
@@ -232,18 +232,18 @@ Properties computed using the SCF density matrix
      X:     0.0000      Y:    -0.0000      Z:    -0.0000     Total:     0.0000
 
 
-*** tstop() called on Mac-mini-3.local at Wed Nov  6 16:01:33 2019
+*** tstop() called on Mac-mini-3.local at Wed Nov  6 18:24:16 2019
 Module time:
-	user time   =       0.22 seconds =       0.00 minutes
+	user time   =       0.21 seconds =       0.00 minutes
 	system time =       0.02 seconds =       0.00 minutes
 	total time  =          0 seconds =       0.00 minutes
 Total time:
-	user time   =       0.22 seconds =       0.00 minutes
+	user time   =       0.21 seconds =       0.00 minutes
 	system time =       0.02 seconds =       0.00 minutes
 	total time  =          0 seconds =       0.00 minutes
 
 *** tstart() called on Mac-mini-3.local
-*** at Wed Nov  6 16:01:37 2019
+*** at Wed Nov  6 18:24:20 2019
 
    => Loading Basis Set <=
 
@@ -414,13 +414,13 @@ Properties computed using the SCF density matrix
      X:     0.0000      Y:     0.0000      Z:    -0.0000     Total:     0.0000
 
 
-*** tstop() called on Mac-mini-3.local at Wed Nov  6 16:01:37 2019
+*** tstop() called on Mac-mini-3.local at Wed Nov  6 18:24:20 2019
 Module time:
-	user time   =       0.11 seconds =       0.00 minutes
+	user time   =       0.10 seconds =       0.00 minutes
 	system time =       0.01 seconds =       0.00 minutes
 	total time  =          0 seconds =       0.00 minutes
 Total time:
-	user time   =       3.68 seconds =       0.06 minutes
+	user time   =       3.63 seconds =       0.06 minutes
 	system time =       0.07 seconds =       0.00 minutes
 	total time  =          4 seconds =       0.07 minutes
  MINTS: Wrapper to libmints.
@@ -448,7 +448,7 @@ Total time:
 
 
 *** tstart() called on Mac-mini-3.local
-*** at Wed Nov  6 16:01:37 2019
+*** at Wed Nov  6 18:24:20 2019
 
 
 	Wfn Parameters:
@@ -523,13 +523,13 @@ Total time:
 	Two-electron energy          =      5.80921798604079
 	Reference energy             =     -8.56133168159358
 
-*** tstop() called on Mac-mini-3.local at Wed Nov  6 16:01:37 2019
+*** tstop() called on Mac-mini-3.local at Wed Nov  6 18:24:20 2019
 Module time:
 	user time   =       0.01 seconds =       0.00 minutes
 	system time =       0.06 seconds =       0.00 minutes
 	total time  =          0 seconds =       0.00 minutes
 Total time:
-	user time   =       3.70 seconds =       0.06 minutes
+	user time   =       3.65 seconds =       0.06 minutes
 	system time =       0.14 seconds =       0.00 minutes
 	total time  =          4 seconds =       0.07 minutes
             **************************
@@ -620,7 +620,7 @@ MP2 correlation energy -0.0334362244724656
       * CCSD total energy                     =   -8.606054675789151
 
 
-    Psi4 stopped on: Wednesday, 06 November 2019 04:01PM
-    Psi4 wall time for execution: 0:00:04.70
+    Psi4 stopped on: Wednesday, 06 November 2019 06:24PM
+    Psi4 wall time for execution: 0:00:04.82
 
 *** Psi4 exiting successfully. Buy a developer a beer!

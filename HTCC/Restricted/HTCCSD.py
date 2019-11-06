@@ -200,8 +200,7 @@ class HTCCSD:
         T2new = self.Vint[o,o,v,v] + J + J.transpose(1,0,3,2) + S + S.transpose(1,0,3,2)
 
         if RELAX_T2:
-            #T2new += self.T3onT2 + self.T3onT2sec + self.T4onT2
-            T2new += self.T3onT2 + self.T4onT2
+            T2new += self.T3onT2 + self.T3onT2sec + self.T4onT2
     
         T2new = np.einsum('uvpg,uvpg->uvpg', T2new, self.D,optimize=EINSUMOPT)
 
@@ -274,7 +273,7 @@ class HTCCSD:
                 + np.einsum('mnef, je, nmiabf -> ijab', self.Vint[o,o,v,v], self.T1, self.CAS_T3aba) \
                 + np.einsum('mnfe, je, mniabf -> ijab', self.Vint[o,o,v,v], self.T1, self.CAS_T3aba)
 
-        self.T3onT2sec = first + second + third
+        self.T3onT2sec = first + 0.5*second + 0.5*third
 
     # PRINT FUNCTIONS FOR DEBUGGING
 
