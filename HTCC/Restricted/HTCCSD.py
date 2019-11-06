@@ -137,7 +137,7 @@ class HTCCSD:
         X = 2*tau - np.einsum('ijab->jiab',tau)
         self.Ecc = np.einsum('abij,ijab->', self.Vint[v,v,o,o], X)
 
-    def T1_T2_Update(self, RELAX_T3 = True, EINSUMOPT='optimal'):
+    def T1_T2_Update(self, RELAX_T3 = True, RELAX_T2 = True, EINSUMOPT='optimal'):
     
         # Compute CCSD Amplitudes. Only the T1 (alpha -> alpha) are considered since the beta -> beta case yields the same amplitude and the mixed case is zero.
         # For T2 amplitudes we consider the case (alpha -> alpha, beta -> beta) the other spin cases can be writen in terms of this one.
@@ -197,12 +197,17 @@ class HTCCSD:
         if RELAX_T3:
             self.relax_t3ont2()
     
-        T2new = self.Vint[o,o,v,v] + J + J.transpose(1,0,3,2) + S + S.transpose(1,0,3,2) + self.T3onT2 + self.T3onT2sec + self.T4onT2 
+        T2new = self.Vint[o,o,v,v] + J + J.transpose(1,0,3,2) + S + S.transpose(1,0,3,2)
+
+        if RELAX_T2:
+            #T2new += self.T3onT2 + self.T3onT2sec + self.T4onT2
+            T2new += self.T3onT2 + self.T4onT2
     
         T2new = np.einsum('uvpg,uvpg->uvpg', T2new, self.D,optimize=EINSUMOPT)
 
-        #self.r2 = np.sum(np.abs(T2new - self.T2))
         self.r2 = 0
+        if RELAX_T2:
+            self.r2 = np.sum(np.abs(T2new - self.T2))
     
         # T1 Amplitudes update
         
@@ -221,8 +226,9 @@ class HTCCSD:
         
         self.r1 = np.sum(np.abs(T1new - self.T1)) 
     
-        #self.T1, self.T2 = T1new, T2new
         self.T1 = T1new
+        if RELAX_T2:
+            self.T2 = T2new
 
     def relax_t3ont2(self):
 
@@ -230,45 +236,45 @@ class HTCCSD:
         v = slice(self.ndocc, self.nbf)
         AntiV = (self.Vint - self.Vint.swapaxes(2,3))[o,o,v,v]
 
-        X = + np.einsum('me, njifba -> ijmnabef', self.T1, self.CAS_T3aba) \
-            - np.einsum('ma, ijnebf -> ijmnabef', self.T1, self.CAS_T3aba) \
-            - np.einsum('ie, mjnabf -> ijmnabef', self.T1, self.CAS_T3aba)
+        #X = + np.einsum('me, njifba -> ijmnabef', self.T1, self.CAS_T3aba) \
+        #    - np.einsum('ma, ijnebf -> ijmnabef', self.T1, self.CAS_T3aba) \
+        #    - np.einsum('ie, mjnabf -> ijmnabef', self.T1, self.CAS_T3aba)
 
-        X = np.einsum('mnef, ijmnabef -> ijab', (self.Vint - self.Vint.swapaxes(2,3))[o,o,v,v], X)
+        #X = np.einsum('mnef, ijmnabef -> ijab', (self.Vint - self.Vint.swapaxes(2,3))[o,o,v,v], X)
 
-        Y = + np.einsum('me, nijfab -> ijmnabef', self.T1, self.CAS_T3aba) \
-            - np.einsum('ma, nijfeb -> ijmnabef', self.T1, self.CAS_T3aba) \
-            - np.einsum('ie, nmjfab -> ijmnabef', self.T1, self.CAS_T3aba)
+        #Y = + np.einsum('me, nijfab -> ijmnabef', self.T1, self.CAS_T3aba) \
+        #    - np.einsum('ma, nijfeb -> ijmnabef', self.T1, self.CAS_T3aba) \
+        #    - np.einsum('ie, nmjfab -> ijmnabef', self.T1, self.CAS_T3aba)
 
-        Y = np.einsum('mnef, ijmnabef -> ijab', self.Vint[o,o,v,v], Y)
+        #Y = np.einsum('mnef, ijmnabef -> ijab', self.Vint[o,o,v,v], Y)
 
-        Z = + np.einsum('mb, ijnefa -> ijmnabef', self.T1, self.CAS_T3aba) \
-            - np.einsum('ie, mnjfab -> ijmnabef', self.T1, self.CAS_T3aba) 
+        #Z = + np.einsum('mb, ijnefa -> ijmnabef', self.T1, self.CAS_T3aba) \
+        #    - np.einsum('ie, mnjfab -> ijmnabef', self.T1, self.CAS_T3aba) 
 
-        Z = np.einsum('mnfe, ijmnabef -> ijab', self.Vint[o,o,v,v], Z)
+        #Z = np.einsum('mnfe, ijmnabef -> ijab', self.Vint[o,o,v,v], Z)
 
-        self.T3onT2sec = X + Y + Z + np.einsum('ijab -> jiba', X + Y + Z)
+        #self.T3onT2sec = X + Y + Z + np.einsum('ijab -> jiba', X + Y + Z)
 
-        #first =  np.einsum('mnef, me, njifba -> ijab', AntiV, self.T1, self.CAS_T3aba) \
-        #       + np.einsum('mnef, me, nijfab -> ijab', AntiV, self.T1, self.CAS_T3aba) \
-        #       + np.einsum('mnef, me, nijfab -> ijab', self.Vint[o,o,v,v], self.T1, self.CAS_T3aba) \
-        #       + np.einsum('mnef, me, njifba -> ijab', self.Vint[o,o,v,v], self.T1, self.CAS_T3aba) 
+        first =  np.einsum('mnef, me, njifba -> ijab', AntiV, self.T1, self.CAS_T3aba) \
+               + np.einsum('mnef, me, nijfab -> ijab', AntiV, self.T1, self.CAS_T3aba) \
+               + np.einsum('mnef, me, nijfab -> ijab', self.Vint[o,o,v,v], self.T1, self.CAS_T3aba) \
+               + np.einsum('mnef, me, njifba -> ijab', self.Vint[o,o,v,v], self.T1, self.CAS_T3aba) 
 
-        #second = - np.einsum('mnef, ma, ijnebf -> ijab', AntiV, self.T1, self.CAS_T3aba) \
-        #         - np.einsum('mnef, ma, nijfeb -> ijab', self.Vint[o,o,v,v], self.T1, self.CAS_T3aba) \
-        #         - np.einsum('mnfe, ma, nijefb -> ijab', self.Vint[o,o,v,v], self.T1, self.CAS_T3aba) \
-        #         + np.einsum('mnef, mb, nijeaf -> ijab', AntiV, self.T1, self.CAS_T3aba) \
-        #         + np.einsum('mnef, mb, ijnfea -> ijab', self.Vint[o,o,v,v], self.T1, self.CAS_T3aba) \
-        #         + np.einsum('mnfe, mb, ijnefa -> ijab', self.Vint[o,o,v,v], self.T1, self.CAS_T3aba)
+        second = - np.einsum('mnef, ma, ijnebf -> ijab', AntiV, self.T1, self.CAS_T3aba) \
+                 - np.einsum('mnef, ma, nijfeb -> ijab', self.Vint[o,o,v,v], self.T1, self.CAS_T3aba) \
+                 - np.einsum('mnfe, ma, nijefb -> ijab', self.Vint[o,o,v,v], self.T1, self.CAS_T3aba) \
+                 + np.einsum('mnef, mb, nijeaf -> ijab', AntiV, self.T1, self.CAS_T3aba) \
+                 + np.einsum('mnef, mb, ijnfea -> ijab', self.Vint[o,o,v,v], self.T1, self.CAS_T3aba) \
+                 + np.einsum('mnfe, mb, ijnefa -> ijab', self.Vint[o,o,v,v], self.T1, self.CAS_T3aba)
 
-        #third = - np.einsum('mnef, ie, mjnabf -> ijab', AntiV, self.T1, self.CAS_T3aba) \
-        #        - np.einsum('mnef, ie, nmjfab -> ijab', self.Vint[o,o,v,v], self.T1, self.CAS_T3aba) \
-        #        - np.einsum('mnfe, ie, mnjfab -> ijab', self.Vint[o,o,v,v], self.T1, self.CAS_T3aba) \
-        #        + np.einsum('mnef, je, minfab -> ijab', AntiV, self.T1, self.CAS_T3aba) \
-        #        + np.einsum('mnef, je, nmiabf -> ijab', self.Vint[o,o,v,v], self.T1, self.CAS_T3aba) \
-        #        + np.einsum('mnfe, je, mniabf -> ijab', self.Vint[o,o,v,v], self.T1, self.CAS_T3aba)
+        third = - np.einsum('mnef, ie, mjnabf -> ijab', AntiV, self.T1, self.CAS_T3aba) \
+                - np.einsum('mnef, ie, nmjfab -> ijab', self.Vint[o,o,v,v], self.T1, self.CAS_T3aba) \
+                - np.einsum('mnfe, ie, mnjfab -> ijab', self.Vint[o,o,v,v], self.T1, self.CAS_T3aba) \
+                + np.einsum('mnef, je, minfab -> ijab', AntiV, self.T1, self.CAS_T3aba) \
+                + np.einsum('mnef, je, nmiabf -> ijab', self.Vint[o,o,v,v], self.T1, self.CAS_T3aba) \
+                + np.einsum('mnfe, je, mniabf -> ijab', self.Vint[o,o,v,v], self.T1, self.CAS_T3aba)
 
-        #self.T3onT2sec = first + second + third
+        self.T3onT2sec = first + second + third
 
     # PRINT FUNCTIONS FOR DEBUGGING
 
@@ -420,7 +426,6 @@ class HTCCSD:
         self.CAS_T1 = np.zeros([self.ndocc, self.nvir])
         self.CAS_T2 = np.zeros([self.ndocc, self.ndocc, self.nvir, self.nvir])
 
-        self.CAS_T3aaa = np.zeros([self.ndocc, self.ndocc, self.ndocc, self.nvir, self.nvir, self.nvir])
         self.CAS_T3aba = np.zeros([self.ndocc, self.ndocc, self.ndocc, self.nvir, self.nvir, self.nvir])
 
         self.CAS_T4abaa = np.zeros([self.ndocc, self.ndocc, self.ndocc, self.ndocc, self.nvir, self.nvir, self.nvir, self.nvir])
@@ -774,13 +779,13 @@ class HTCCSD:
 
         # Compute T3 contribution to T1.
 
-        #self.T3onT1 = + (1.0/4.0)*np.einsum('mnef,imnaef->ia', (self.Vint - self.Vint.swapaxes(2,3))[o,o,v,v], self.CAS_T3aaa) \
-        #              + (1.0/4.0)*np.einsum('mnef,mineaf->ia', (self.Vint - self.Vint.swapaxes(2,3))[o,o,v,v], self.CAS_T3aba) \
-        #              + np.einsum('mnef,imnaef->ia', self.Vint[o,o,v,v], self.CAS_T3aba) 
+        #self.T3onT1 = - (1.0/4.0)*np.einsum('mnef,imnaef->ia', (self.Vint - self.Vint.swapaxes(2,3))[o,o,v,v], self.CAS_T3aaa) \
+        #              - (1.0/4.0)*np.einsum('mnef,mineaf->ia', (self.Vint - self.Vint.swapaxes(2,3))[o,o,v,v], self.CAS_T3aba) \
+        #              - np.einsum('mnef,imnaef->ia', self.Vint[o,o,v,v], self.CAS_T3aba) 
 
         V = (2*self.Vint - np.einsum('ijab -> ijba', self.Vint))[o,o,v,v]
         self.T3onT1 = np.einsum('ijab, jiupab -> up', V, self.CAS_T3aba)
-
+        
         # Compute T3 contribution to T2. Checked!! Spin-Integrated equation simplified with permutation operator.
 
         self.T3onT2 = +    np.einsum('bmef, ijmaef -> ijab', self.Vint[v,o,v,v], self.CAS_T3aba)                             \
@@ -809,12 +814,16 @@ class HTCCSD:
 
         # Compute T4 contribution to T2
         
-        self.T4onT2 = np.einsum('mnef, ijmnabef -> ijab', (self.Vint - self.Vint.swapaxes(2,3))[o,o,v,v], self.CAS_T4abaa)        
+        print('GENERATING T4 ON T2')
 
-        self.T4onT2 += np.einsum('ijab -> jiba', self.T4onT2)
+        #self.T4onT2 = np.einsum('mnef, ijmnabef -> ijab', (self.Vint - self.Vint.swapaxes(2,3))[o,o,v,v], self.CAS_T4abaa)        
 
-        self.T4onT2 = (1.0/4.0)*self.T4onT2 + np.einsum('mnef, ijmnabef -> ijab', self.Vint[o,o,v,v], self.CAS_T4abab)
-    
+        #self.T4onT2 += np.einsum('ijab -> jiba', self.T4onT2)
+
+        #self.T4onT2 = (1.0/4.0)*self.T4onT2 + np.einsum('mnef, ijmnabef -> ijab', self.Vint[o,o,v,v], self.CAS_T4abab)
+
+        self.T4onT2 = np.einsum('mnef, ijmnabef -> ijab', self.Vint[o,o,v,v], self.CAS_T4abab)
+
         # Compute CCSD 
 
         print('------- TAILORED COUPLED CLUSTER STARTED -------\n')
@@ -849,7 +858,7 @@ class HTCCSD:
         if MP2_GUESS:
 
             self.T1 = np.zeros([self.ndocc, self.nvir])
-            self.T2  = np.einsum('ijab,ijab->ijab', self.Vint[o,o,v,v], self.D)
+            #self.T2  = np.einsum('ijab,ijab->ijab', self.Vint[o,o,v,v], self.D)
             self.cc_energy()
             print('MP2 Energy: {:<5.10f}'.format(self.Ecc+self.Escf))
             
@@ -870,7 +879,7 @@ class HTCCSD:
                 raise NameError("CC Equations did not converge in {} iterations".format(CC_MAXITER))
             Eold = self.Ecc
             t = time.time()
-            self.T1_T2_Update(RELAX_T3 = RELAX_T3)
+            self.T1_T2_Update(RELAX_T3 = RELAX_T3, RELAX_T2 = True)
             self.cc_energy()
             dE = self.Ecc - Eold
             print('-'*50)
