@@ -137,11 +137,12 @@ class HTCCSD:
         X = 2*tau - np.einsum('ijab->jiab',tau)
         self.Ecc = np.einsum('abij,ijab->', self.Vint[v,v,o,o], X)
 
-    def T1_T2_Update(self, RELAX_T3 = True, RELAX_T2 = True, EINSUMOPT='optimal'):
+    def T1_T2_Update(self, RELAX_T3 = True, EINSUMOPT='optimal'):
     
         # Compute CCSD Amplitudes. Only the T1 (alpha -> alpha) are considered since the beta -> beta case yields the same amplitude and the mixed case is zero.
         # For T2 amplitudes we consider the case (alpha -> alpha, beta -> beta) the other spin cases can be writen in terms of this one.
         # Equations from J. Chem. Phys. 86, 2881 (1987): G. E. Scuseria et al.
+
         # CC Intermediate arrays
     
         o = slice(0, self.ndocc)
@@ -197,16 +198,11 @@ class HTCCSD:
         if RELAX_T3:
             self.relax_t3ont2()
     
-        T2new = self.Vint[o,o,v,v] + J + J.transpose(1,0,3,2) + S + S.transpose(1,0,3,2)
+        T2new = self.Vint[o,o,v,v] + J + J.transpose(1,0,3,2) + S + S.transpose(1,0,3,2) + self.T3onT2 + self.T3onT2sec + self.T4onT2
 
-        if RELAX_T2:
-            T2new += self.T3onT2 + self.T3onT2sec + self.T4onT2
-    
         T2new = np.einsum('uvpg,uvpg->uvpg', T2new, self.D,optimize=EINSUMOPT)
 
-        self.r2 = 0
-        if RELAX_T2:
-            self.r2 = np.sum(np.abs(T2new - self.T2))
+        self.r2 = np.sum(np.abs(T2new - self.T2))
     
         # T1 Amplitudes update
         
@@ -226,8 +222,7 @@ class HTCCSD:
         self.r1 = np.sum(np.abs(T1new - self.T1)) 
     
         self.T1 = T1new
-        if RELAX_T2:
-            self.T2 = T2new
+        self.T2 = T2new
 
     def relax_t3ont2(self):
 
@@ -274,100 +269,6 @@ class HTCCSD:
                 + np.einsum('mnfe, je, mniabf -> ijab', self.Vint[o,o,v,v], self.T1, self.CAS_T3aba)
 
         self.T3onT2sec = first + 0.5*second + 0.5*third
-
-    # PRINT FUNCTIONS FOR DEBUGGING
-
-    def printcast1(self,w=False):
-        out = ''
-        for i in range(self.ndocc):
-            for a in range(self.nvir):
-                x = self.CAS_T1[i,a]
-                if abs(x) > 1e-10:
-                    out += '{}a -> {}a {:< 5.8e}'.format(i+1,1+a+self.ndocc,x)
-                    out += '\n'
-        if w:
-            fil = open('t1amps.dat','w') 
-            fil.write(out)
-            fil.close()
-        else:
-            print(out)
-
-    def printcast2(self,w=False):
-        out = ''
-        for i in range(self.ndocc):
-            for j in range(self.ndocc):
-                if j > i: break
-                for a in range(self.nvir):
-                    for b in range(self.nvir):
-                        if b > a: break
-                        x = self.CAS_T2[i,j,a,b]
-                        if abs(x) > 1e-10:
-                            out += '{}a {}b -> {}a {}b {:< 5.8e}'.format(i+1,j+1,1+a+self.ndocc,1+b+self.ndocc,x)
-                            out += '\n'
-        if w:
-            fil = open('t2amps.dat','w') 
-            fil.write(out)
-            fil.close()
-        else:
-            print(out)
-
-    def printcast3(self,w=False):
-        out = ''
-        for i in range(self.ndocc):
-            for j in range(self.ndocc):
-                if j > i: break
-                for k in range(self.ndocc):
-                    if k > j: break
-                    for a in range(self.nvir):
-                        for b in range(self.nvir):
-                            if b > a: break
-                            for c in range(self.nvir):
-                                if c > b: break
-                                x = self.CAS_T3aba[i,j,k,a,b,c]
-                                if abs(x) > 1e-10:
-                                    out += '{}a {}b {}a -> {}a {}b {}a  {:< 5.8e}'.format(i+1,j+1,k+1,1+a+self.ndocc,1+b+self.ndocc,1+c+self.ndocc,x)
-                                    out += '\n'
-                                y = self.CAS_T3aaa[i,j,k,a,b,c]
-                                if abs(y) > 1e-10:
-                                    out += '{}a {}a {}a -> {}a {}a {}a  {:< 5.8e}'.format(i+1,j+1,k+1,1+a+self.ndocc,1+b+self.ndocc,1+c+self.ndocc,y)
-                                    out += '\n'
-        if w:
-            fil = open('t3amps.dat','w') 
-            fil.write(out)
-            fil.close()
-        else:
-            print(out)
-
-    def printcast4(self,w=False):
-        out = ''
-        for i in range(self.ndocc):
-            for j in range(self.ndocc):
-                if j > i: break
-                for k in range(self.ndocc):
-                    if k > j: break
-                    for a in range(self.nvir):
-                        for b in range(self.nvir):
-                            if b > a: break
-                            for c in range(self.nvir):
-                                if c > b: break
-                                for d in range(self.nvir):
-                                    if d > c: break
-                                    for l in range(self.ndocc):
-                                        if l > k: break
-                                        x = self.CAS_T4abaa[i,j,k,l,a,b,c,d]
-                                        if abs(x) > 1e-10:
-                                            out += '{}a {}b {}a {}a -> {}a {}b {}a {}a {:< 5.8e}'.format(i+1,j+1,k+1,l+1,1+a+self.ndocc,1+b+self.ndocc,1+c+self.ndocc,1+d+self.ndocc,x)
-                                            out += '\n'
-                                        x = self.CAS_T4abab[i,j,k,l,a,b,c,d]
-                                        if abs(x) > 1e-6:
-                                            out += '{}a {}b {}a {}b -> {}a {}b {}a {}b {:< 5.8e}'.format(i+1,j+1,k+1,l+1,1+a+self.ndocc,1+b+self.ndocc,1+c+self.ndocc,1+d+self.ndocc,x)
-                                            out += '\n'
-        if w:
-            fil = open('t4amps.dat','w') 
-            fil.write(out)
-            fil.close()
-        else:
-            print(out)
 
     def HTCCSD(self, active_space='', CC_CONV=6, CC_MAXITER=50, MP2_GUESS=False, RELAX_T3=True):
         
@@ -623,7 +524,6 @@ class HTCCSD:
                           + np.einsum('ic,jb,ka -> ijkabc', self.CAS_T1, self.CAS_T1, self.CAS_T1) 
 
         self.CAS_T3aaa = self.CAS_T3aba - np.einsum('ijkabc -> ikjabc', self.CAS_T3aba) - np.einsum('ijkabc -> jikabc', self.CAS_T3aba)
-
         print('Translating quadruples...')
         # Quadruples
 
@@ -778,9 +678,8 @@ class HTCCSD:
 
         # Compute T3 contribution to T1.
 
-        #self.T3onT1 = - (1.0/4.0)*np.einsum('mnef,imnaef->ia', (self.Vint - self.Vint.swapaxes(2,3))[o,o,v,v], self.CAS_T3aaa) \
-        #              - (1.0/4.0)*np.einsum('mnef,mineaf->ia', (self.Vint - self.Vint.swapaxes(2,3))[o,o,v,v], self.CAS_T3aba) \
-        #              - np.einsum('mnef,imnaef->ia', self.Vint[o,o,v,v], self.CAS_T3aba) 
+        # Contribution of connected T3 amplitudes to T1 equations. 
+        # Equation from Chem. Phys. Lett. 152, 382 (1988): G. E. Scuseria and H. F. Schaefer III
 
         V = (2*self.Vint - np.einsum('ijab -> ijba', self.Vint))[o,o,v,v]
         self.T3onT1 = np.einsum('ijab, jiupab -> up', V, self.CAS_T3aba)
@@ -794,19 +693,6 @@ class HTCCSD:
 
         self.T3onT2 = self.T3onT2 + np.einsum('ijab -> jiba', self.T3onT2) 
 
-        #self.T3onT2 = +0.5*np.einsum('bmef, jimeaf -> ijab', (self.Vint - self.Vint.swapaxes(2,3))[v,o,v,v], self.CAS_T3aba) \
-        #              +0.5*np.einsum('amef, ijmebf -> ijab', (self.Vint - self.Vint.swapaxes(2,3))[v,o,v,v], self.CAS_T3aba) \
-        #              +0.5*np.einsum('bmef, ijmaef -> ijab', self.Vint[v,o,v,v], self.CAS_T3aba)                             \
-        #              +0.5*np.einsum('amef, jimbef -> ijab', self.Vint[v,o,v,v], self.CAS_T3aba)                             \
-        #              +0.5*np.einsum('bmfe, ijmafe -> ijab', self.Vint[v,o,v,v], self.CAS_T3aba)                             \
-        #              +0.5*np.einsum('amfe, jimbfe -> ijab', self.Vint[v,o,v,v], self.CAS_T3aba)                             \
-        #              -0.5*np.einsum('mnje, minbae -> ijab', (self.Vint - self.Vint.swapaxes(2,3))[o,o,o,v], self.CAS_T3aba) \
-        #              -0.5*np.einsum('mnie, mjnabe -> ijab', (self.Vint - self.Vint.swapaxes(2,3))[o,o,o,v], self.CAS_T3aba) \
-        #              -0.5*np.einsum('mnje, imnabe -> ijab', self.Vint[o,o,o,v], self.CAS_T3aba)                             \
-        #              -0.5*np.einsum('mnie, jmnbae -> ijab', self.Vint[o,o,o,v], self.CAS_T3aba)                             \
-        #              -0.5*np.einsum('mnej, inmabe -> ijab', self.Vint[o,o,v,o], self.CAS_T3aba)                             \
-        #              -0.5*np.einsum('mnei, jnmbae -> ijab', self.Vint[o,o,v,o], self.CAS_T3aba)                             
-
         ## T1 dependend part
 
         self.relax_t3ont2()
@@ -815,13 +701,13 @@ class HTCCSD:
         
         print('GENERATING T4 ON T2')
 
-        #self.T4onT2 = np.einsum('mnef, ijmnabef -> ijab', (self.Vint - self.Vint.swapaxes(2,3))[o,o,v,v], self.CAS_T4abaa)        
+        self.T4onT2 = np.einsum('mnef, ijmnabef -> ijab', (self.Vint - self.Vint.swapaxes(2,3))[o,o,v,v], self.CAS_T4abaa)        
 
-        #self.T4onT2 += np.einsum('ijab -> jiba', self.T4onT2)
+        self.T4onT2 += np.einsum('ijab -> jiba', self.T4onT2)
 
-        #self.T4onT2 = (1.0/4.0)*self.T4onT2 + np.einsum('mnef, ijmnabef -> ijab', self.Vint[o,o,v,v], self.CAS_T4abab)
+        self.T4onT2 = (1.0/4.0)*self.T4onT2 + np.einsum('mnef, ijmnabef -> ijab', self.Vint[o,o,v,v], self.CAS_T4abab)
 
-        self.T4onT2 = np.einsum('mnef, ijmnabef -> ijab', self.Vint[o,o,v,v], self.CAS_T4abab)
+        #self.T4onT2 = np.einsum('mnef, ijmnabef -> ijab', self.Vint[o,o,v,v], self.CAS_T4abab)
 
         # Compute CCSD 
 
@@ -840,6 +726,7 @@ class HTCCSD:
         for i,ei in enumerate(self.eps[o]):
             for j,ej in enumerate(self.eps[o]):
                 for a,ea in enumerate(self.eps[v]):
+        # Note that G. E. Scuseria used a non conventional def. of D(i,a): ea - ei. Other refs will define this as (ei - ea)
                     self.d[i,a] = 1/(ea - ei)
                     for b,eb in enumerate(self.eps[v]):
                         self.D[i,j,a,b] = 1/(ei + ej - ea - eb)
@@ -850,14 +737,13 @@ class HTCCSD:
         self.cc_energy()
         print('CC Energy from CAS Amplitudes: {:<5.10f}'.format(self.Ecc+self.Escf))
 
-        #tcompare(self.T1, self.T2, self.CAS_T3aaa, self.CAS_T3aba, self.CAS_T4abaa, self.CAS_T4abab, self.ndocc)
 
         # Guess MP2
 
         if MP2_GUESS:
 
             self.T1 = np.zeros([self.ndocc, self.nvir])
-            #self.T2  = np.einsum('ijab,ijab->ijab', self.Vint[o,o,v,v], self.D)
+            self.T2  = np.einsum('ijab,ijab->ijab', self.Vint[o,o,v,v], self.D)
             self.cc_energy()
             print('MP2 Energy: {:<5.10f}'.format(self.Ecc+self.Escf))
             
@@ -865,12 +751,7 @@ class HTCCSD:
         self.r2 = 1
             
         LIM = 10**(-CC_CONV)
-        ite = 0 + 0
-        
-        self.printcast1(w=True)
-        self.printcast2(w=True)
-        self.printcast3(w=True)
-        self.printcast4(w=True)
+        ite = 0
         
         while self.r2 > LIM or self.r1 > LIM:
             ite += 1
@@ -878,7 +759,7 @@ class HTCCSD:
                 raise NameError("CC Equations did not converge in {} iterations".format(CC_MAXITER))
             Eold = self.Ecc
             t = time.time()
-            self.T1_T2_Update(RELAX_T3 = RELAX_T3, RELAX_T2 = True)
+            self.T1_T2_Update(RELAX_T3 = RELAX_T3)
             self.cc_energy()
             dE = self.Ecc - Eold
             print('-'*50)

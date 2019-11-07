@@ -65,8 +65,95 @@ def compare_amps(t1, t2ab, t3aaa, t3aba, t4abaa, t4abab):
             values.append(float(line[0]))
             labels = line[1:]
         print(labels)
-            
-    
 
+def printcast1(t1, nvir, ndocc, w=False):
+    out = ''
+    for i in range(ndocc):
+        for a in range(nvir):
+            x = t1[i,a]
+            if abs(x) > 1e-10:
+                out += '{}a -> {}a {:< 5.8e}'.format(i+1,1+a+ndocc,x)
+                out += '\n'
+    if w:
+        fil = open('t1amps.dat','w') 
+        fil.write(out)
+        fil.close()
+    else:
+        print(out)
 
+def printcast2(t2, nvir, ndocc, w=False):
+    out = ''
+    for i in range(ndocc):
+        for j in range(ndocc):
+            if j > i: break
+            for a in range(nvir):
+                for b in range(nvir):
+                    if b > a: break
+                    x = t2[i,j,a,b]
+                    if abs(x) > 1e-10:
+                        out += '{}a {}b -> {}a {}b {:< 5.8e}'.format(i+1,j+1,1+a+ndocc,1+b+ndocc,x)
+                        out += '\n'
+    if w:
+        fil = open('t2amps.dat','w') 
+        fil.write(out)
+        fil.close()
+    else:
+        print(out)
 
+def printcast3(t3aba, t3aaa, ndocc, nvir, w=False):
+    out = ''
+    for i in range(ndocc):
+        for j in range(ndocc):
+            if j > i: break
+            for k in range(ndocc):
+                if k > j: break
+                for a in range(nvir):
+                    for b in range(nvir):
+                        if b > a: break
+                        for c in range(nvir):
+                            if c > b: break
+                            x = t3aba[i,j,k,a,b,c]
+                            if abs(x) > 1e-10:
+                                out += '{}a {}b {}a -> {}a {}b {}a  {:< 5.8e}'.format(i+1,j+1,k+1,1+a+ndocc,1+b+ndocc,1+c+ndocc,x)
+                                out += '\n'
+                            y = t3aaa[i,j,k,a,b,c]
+                            if abs(y) > 1e-10:
+                                out += '{}a {}a {}a -> {}a {}a {}a  {:< 5.8e}'.format(i+1,j+1,k+1,1+a+ndocc,1+b+ndocc,1+c+ndocc,y)
+                                out += '\n'
+    if w:
+        fil = open('t3amps.dat','w') 
+        fil.write(out)
+        fil.close()
+    else:
+        print(out)
+
+def printcast4(t4abaa, t4abab, ndocc, nvir, w=False):
+    out = ''
+    for i in range(ndocc):
+        for j in range(ndocc):
+            if j > i: break
+            for k in range(ndocc):
+                if k > j: break
+                for a in range(nvir):
+                    for b in range(nvir):
+                        if b > a: break
+                        for c in range(nvir):
+                            if c > b: break
+                            for d in range(nvir):
+                                if d > c: break
+                                for l in range(ndocc):
+                                    if l > k: break
+                                    x = t4abaa[i,j,k,l,a,b,c,d]
+                                    if abs(x) > 1e-10:
+                                        out += '{}a {}b {}a {}a -> {}a {}b {}a {}a {:< 5.8e}'.format(i+1,j+1,k+1,l+1,1+a+ndocc,1+b+ndocc,1+c+ndocc,1+d+ndocc,x)
+                                        out += '\n'
+                                    x = t4abab[i,j,k,l,a,b,c,d]
+                                    if abs(x) > 1e-6:
+                                        out += '{}a {}b {}a {}b -> {}a {}b {}a {}b {:< 5.8e}'.format(i+1,j+1,k+1,l+1,1+a+ndocc,1+b+ndocc,1+c+ndocc,1+d+ndocc,x)
+                                        out += '\n'
+    if w:
+        fil = open('t4amps.dat','w') 
+        fil.write(out)
+        fil.close()
+    else:
+        print(out)

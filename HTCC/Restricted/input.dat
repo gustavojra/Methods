@@ -11,7 +11,7 @@ molecule mol {
 }
 
 set {
-    BASIS         cc-pvdz
+    BASIS         6-31g
     REFERENCE     RHF
     SCF_TYPE      PK
     SOSCF         True
@@ -24,7 +24,7 @@ set {
 
 X = HTCCSD(mol)
 
-X.HTCCSD('full', CC_CONV=12, MP2_GUESS=False, RELAX_T3=True)
+X.HTCCSD('full', CC_CONV=12, MP2_GUESS=True, RELAX_T3=True)
 
 print('CAS energy:   {:<5.10f}'.format(X.Ecas))
 print('CCSD Energy:  {:<5.10f}'.format(energy('ccsd')))
