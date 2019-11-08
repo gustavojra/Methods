@@ -28,4 +28,3 @@ X.HTCCSD('full', CC_CONV=12, MP2_GUESS=True, RELAX_T3=True)
 
 print('CAS energy:   {:<5.10f}'.format(X.Ecas))
 print('CCSD Energy:  {:<5.10f}'.format(energy('ccsd')))
-#print('CCSDT (MRCC): -5.7381125680')
