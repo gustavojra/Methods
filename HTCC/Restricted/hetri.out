@@ -23,9 +23,9 @@
     -----------------------------------------------------------------------
 
 
-    Psi4 started on: Friday, 08 November 2019 05:03PM
+    Psi4 started on: Monday, 11 November 2019 03:23PM
 
-    Process ID: 4949
+    Process ID: 7437
     Host:       Mac-mini-3.local
     PSIDATADIR: /Users/aroeira/psi4conda/share/psi4
     Memory:     500.0 MiB
@@ -67,7 +67,7 @@ print('CCSD Energy:  {:<5.10f}'.format(energy('ccsd')))
 --------------------------------------------------------------------------
 
 *** tstart() called on Mac-mini-3.local
-*** at Fri Nov  8 17:03:59 2019
+*** at Mon Nov 11 15:23:20 2019
 
    => Loading Basis Set <=
 
@@ -232,7 +232,7 @@ Properties computed using the SCF density matrix
      X:     0.0000      Y:    -0.0000      Z:    -0.0000     Total:     0.0000
 
 
-*** tstop() called on Mac-mini-3.local at Fri Nov  8 17:04:00 2019
+*** tstop() called on Mac-mini-3.local at Mon Nov 11 15:23:21 2019
 Module time:
 	user time   =       0.20 seconds =       0.00 minutes
 	system time =       0.01 seconds =       0.00 minutes
@@ -243,7 +243,7 @@ Total time:
 	total time  =          1 seconds =       0.02 minutes
 
 *** tstart() called on Mac-mini-3.local
-*** at Fri Nov  8 17:04:03 2019
+*** at Mon Nov 11 15:23:24 2019
 
    => Loading Basis Set <=
 
@@ -414,14 +414,14 @@ Properties computed using the SCF density matrix
      X:     0.0000      Y:     0.0000      Z:    -0.0000     Total:     0.0000
 
 
-*** tstop() called on Mac-mini-3.local at Fri Nov  8 17:04:03 2019
+*** tstop() called on Mac-mini-3.local at Mon Nov 11 15:23:24 2019
 Module time:
 	user time   =       0.09 seconds =       0.00 minutes
 	system time =       0.01 seconds =       0.00 minutes
 	total time  =          0 seconds =       0.00 minutes
 Total time:
-	user time   =       3.76 seconds =       0.06 minutes
-	system time =       0.05 seconds =       0.00 minutes
+	user time   =       3.30 seconds =       0.06 minutes
+	system time =       0.04 seconds =       0.00 minutes
 	total time  =          4 seconds =       0.07 minutes
  MINTS: Wrapper to libmints.
    by Justin Turney
@@ -448,7 +448,7 @@ Total time:
 
 
 *** tstart() called on Mac-mini-3.local
-*** at Fri Nov  8 17:04:03 2019
+*** at Mon Nov 11 15:23:24 2019
 
 
 	Wfn Parameters:
@@ -523,13 +523,13 @@ Total time:
 	Two-electron energy          =      5.80921798604079
 	Reference energy             =     -8.56133168159358
 
-*** tstop() called on Mac-mini-3.local at Fri Nov  8 17:04:03 2019
+*** tstop() called on Mac-mini-3.local at Mon Nov 11 15:23:24 2019
 Module time:
 	user time   =       0.01 seconds =       0.00 minutes
 	system time =       0.05 seconds =       0.00 minutes
 	total time  =          0 seconds =       0.00 minutes
 Total time:
-	user time   =       3.78 seconds =       0.06 minutes
+	user time   =       3.32 seconds =       0.06 minutes
 	system time =       0.10 seconds =       0.00 minutes
 	total time  =          4 seconds =       0.07 minutes
             **************************
@@ -620,7 +620,7 @@ MP2 correlation energy -0.0334362244724656
       * CCSD total energy                     =   -8.606054675789151
 
 
-    Psi4 stopped on: Friday, 08 November 2019 05:04PM
-    Psi4 wall time for execution: 0:00:04.25
+    Psi4 stopped on: Monday, 11 November 2019 03:23PM
+    Psi4 wall time for execution: 0:00:03.78
 
 *** Psi4 exiting successfully. Buy a developer a beer!

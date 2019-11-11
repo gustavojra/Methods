@@ -15,8 +15,6 @@ from ampcomp import tcompare
 from CASCI import CASCI
 from CASDecom import CASDecom
 
-np.set_printoptions(suppress=True)
-
 class HTCCSD:
 
     def __init__(self, mol):
@@ -165,80 +163,60 @@ class HTCCSD:
         v = slice(self.ndocc, self.nbf)
         AntiV = (self.Vint - self.Vint.swapaxes(2,3))[o,o,v,v]
 
-        #X = + np.einsum('me, njifba -> ijmnabef', self.T1, self.CAS_T3aba) \
-        #    - np.einsum('ma, ijnebf -> ijmnabef', self.T1, self.CAS_T3aba) \
-        #    - np.einsum('ie, mjnabf -> ijmnabef', self.T1, self.CAS_T3aba)
-
-        #X = np.einsum('mnef, ijmnabef -> ijab', (self.Vint - self.Vint.swapaxes(2,3))[o,o,v,v], X)
-
-        #Y = + np.einsum('me, nijfab -> ijmnabef', self.T1, self.CAS_T3aba) \
-        #    - np.einsum('ma, nijfeb -> ijmnabef', self.T1, self.CAS_T3aba) \
-        #    - np.einsum('ie, nmjfab -> ijmnabef', self.T1, self.CAS_T3aba)
-
-        #Y = np.einsum('mnef, ijmnabef -> ijab', self.Vint[o,o,v,v], Y)
-
-        #Z = + np.einsum('mb, ijnefa -> ijmnabef', self.T1, self.CAS_T3aba) \
-        #    - np.einsum('ie, mnjfab -> ijmnabef', self.T1, self.CAS_T3aba) 
-
-        #Z = np.einsum('mnfe, ijmnabef -> ijab', self.Vint[o,o,v,v], Z)
-
-        #self.T3onT2sec = X + Y + Z + np.einsum('ijab -> jiba', X + Y + Z)
-
-        #first =  np.einsum('mnef, me, njifba -> ijab', AntiV, self.T1, self.T3) \
-        #       + np.einsum('mnef, me, nijfab -> ijab', AntiV, self.T1, self.T3) \
-        #       + np.einsum('mnef, me, nijfab -> ijab', self.Vint[o,o,v,v], self.T1, self.T3) \
-        #       + np.einsum('mnef, me, njifba -> ijab', self.Vint[o,o,v,v], self.T1, self.T3) 
-
+        # First term
         X = 2*self.Vint[o,o,v,v] - self.Vint[o,o,v,v].swapaxes(2,3)
-        first = np.einsum('mnef,me->nf', X, self.T1)
-        first = np.einsum('nf, nijfab -> ijab', first, self.T3)
-        first = first + np.einsum('ijab -> jiba', first)
+        X = np.einsum('mnef,me->nf', X, self.T1)
+        X = np.einsum('nf, nijfab -> ijab', X, self.T3)
+        self.T3onT2sec = copy.deepcopy(X)
 
-        #second = - np.einsum('mnef, ma, ijnebf -> ijab', AntiV, self.T1, self.T3) \
-        #         - np.einsum('mnef, ma, nijfeb -> ijab', self.Vint[o,o,v,v], self.T1, self.T3) \
-        #         - np.einsum('mnfe, ma, nijefb -> ijab', self.Vint[o,o,v,v], self.T1, self.T3) \
-        #         + np.einsum('mnef, mb, nijeaf -> ijab', AntiV, self.T1, self.T3) \
-        #         + np.einsum('mnef, mb, ijnfea -> ijab', self.Vint[o,o,v,v], self.T1, self.T3) \
-        #         + np.einsum('mnfe, mb, ijnefa -> ijab', self.Vint[o,o,v,v], self.T1, self.T3)
-        X = np.einsum('mnef, ma -> anef', self.Vint[o,o,v,v], self.T1)
-        Y = self.T3 + 2*np.einsum('ijnebf->nijfeb', self.T3)
-        second = np.einsum('anef, ijnebf -> ijab', X, Y)
+        # Second term
+        X = 0.5*np.einsum('mnef, njiebf -> ijmb', AntiV, self.T3) + np.einsum('mnef, jinfeb -> ijmb', self.Vint[o,o,v,v], self.T3)
+        X = np.einsum('ijmb, ma -> ijab', X, self.T1)
 
-        X = np.einsum('mnfe, ma -> anef', self.Vint[o,o,v,v], self.T1)
-        second += - np.einsum('anef, ijnebf', X, self.T3)
+        self.T3onT2sec += X
 
-        X = np.einsum('mnef, ie -> mnif', self.Vint[o,o,v,v], self.T1)
-        Y = self.T3 + 2*np.einsum('mjnabf->nmjfab', self.T3)
-        second += np.einsum('mnif,mjnabf -> ijab', X, Y)
+        # Third term
+        X = 0.5*np.einsum('mnef, mjnfba -> ejab', AntiV, self.T3) + np.einsum('mnef, nmjbaf -> ejab', self.Vint[o,o,v,v], self.T3)
+        X = np.einsum('ejab, ie -> ijab', X, self.T1)
 
-        X = np.einsum('mnfe, ie -> mnif', self.Vint[o,o,v,v], self.T1)
-        second += - np.einsum('mnif, nmjfab', X, self.T3)
-
-        second = 0.5*(second + np.einsum('ijab -> jiba', second))
-
-        third = - np.einsum('mnef, ie, mjnabf -> ijab', AntiV, self.T1, self.T3) \
-                - np.einsum('mnef, ie, nmjfab -> ijab', self.Vint[o,o,v,v], self.T1, self.T3) \
-                - np.einsum('mnfe, ie, mnjfab -> ijab', self.Vint[o,o,v,v], self.T1, self.T3) \
-                + np.einsum('mnef, je, minfab -> ijab', AntiV, self.T1, self.T3) \
-                + np.einsum('mnef, je, nmiabf -> ijab', self.Vint[o,o,v,v], self.T1, self.T3) \
-                + np.einsum('mnfe, je, mniabf -> ijab', self.Vint[o,o,v,v], self.T1, self.T3)
-
-        #self.T3onT2sec = first + 0.5*second + 0.5*third
-        self.T3onT2sec = first + second
+        self.T3onT2sec += X
+                
+        # Apply permutation
+        self.T3onT2sec += np.einsum('ijab -> jiba', self.T3onT2sec)
 
     def HTCCSD(self, active_space='', CC_CONV=6, CC_MAXITER=50, MP2_GUESS=False, RELAX_T3T1=True):
-        
-        tinit = time.time()
 
-        # Run CASCI with the given active space
+        # This is the main function in this code. After initializing the class object you need to call this
+        # function to compute TCC energies. Thus, your Psi4 input needs to contain:
+        """
+         from HTCCSD import HTCCSD
+         ...
+         molecule
+         ...
+         example = HTCCSD(molecule)
+         example.HTCCSD(inputs)
+        """
+        # The correlation energy will be avaliable as example.Ecc
+        # This function works in a 4 steps process:
+        # - CASCI computation
+        # - Translation step
+        # - T3 and T4 contribution computation
+        # - CCSD computation
+        
+        ############### STEP 1 ###############
+        ##############  CASCI  ###############
 
         print('------- COMPLETE ACTIVE SPACE CONFIGURATION INTERACTION STARTED -------\n')
 
+        # Compute CASCI with the given active space
 
         self.Ecas, self.Ccas, self.ref, self.determinants, active_space = \
             CASCI(active_space, nmo=self.nmo, nelec=self.nelec, OEI=self.h, TEI=self.Vint) 
 
         self.Ecas = self.Ecas + self.Vnuc
+
+        ############### STEP 2 ###############
+        ############  CASDecom  ##############
 
         # Run CASDecom to translate CI coefficients into CC amplitudes
 
@@ -252,6 +230,9 @@ class HTCCSD:
         print('CAS Energy: {:<5.10f}'.format(self.Ecas))
         print('CC Energy:  {:<5.10f}'.format(self.Ecc + self.Escf))
 
+        ############### STEP 3 ###############
+        ######  T3 & T4 contributions  #######
+
         # Compute contribution of high order amplitudes (T3 and T4) to T1 and T2 equations
 
         ## Slices: used to produce different sets of integrals within particles or holes space
@@ -259,13 +240,13 @@ class HTCCSD:
         o = slice(0, self.ndocc)
         v = slice(self.ndocc, self.nbf)
 
-        ## Contribution of connected T3 term to T1 equations. 
+        ## Contribution of connected T3 terms to T1 equations. 
         ## Equation from Chem. Phys. Lett. 152, 382 (1988): G. E. Scuseria and H. F. Schaefer III
 
         V = (2*self.Vint - np.einsum('ijab -> ijba', self.Vint))[o,o,v,v]
         self.T3onT1 = np.einsum('ijab, jiupab -> up', V, self.T3)
         
-        ## Contribution of connected T3 term to T2 equations. 
+        ## Contribution of connected T3 terms to T2 equations. 
 
         self.T3onT2 = +0.5*np.einsum('bmef, jimeaf -> ijab', (self.Vint - self.Vint.swapaxes(2,3))[v,o,v,v], self.T3) \
                       +    np.einsum('bmef, ijmaef -> ijab', self.Vint[v,o,v,v], self.T3)                             \
@@ -274,11 +255,11 @@ class HTCCSD:
 
         self.T3onT2 = self.T3onT2 + np.einsum('ijab -> jiba', self.T3onT2) 
 
-        ## Contribution of disconnected T3*T1 term to T2 equations via relax_t3t1ont2 function.
+        ## Contribution of disconnected T3*T1 terms to T2 equations via relax_t3t1ont2 function.
 
         self.relax_t3t1ont2()
 
-        ## Contribution of connected T4 term to T2 equations.
+        ## Contribution of connected T4 terms to T2 equations.
         
         self.T4onT2 = np.einsum('mnef, ijmnabef -> ijab', (self.Vint - self.Vint.swapaxes(2,3))[o,o,v,v], self.T4abaa)        
 
@@ -286,7 +267,8 @@ class HTCCSD:
 
         self.T4onT2 = (1.0/4.0)*self.T4onT2 + np.einsum('mnef, ijmnabef -> ijab', self.Vint[o,o,v,v], self.T4abab)
         
-        # Compute CCSD 
+        ############### STEP 4 ###############
+        ###############  CCSD  ###############
 
         # Build the Auxiliar Matrix D
 
@@ -342,4 +324,3 @@ class HTCCSD:
 
         print("\nCC Equations Converged!!!")
         print("Final TCCSD Energy:     {:<5.10f}".format(self.Ecc))
-        print("Total Computation time:        {}".format(time.time() - tinit))
