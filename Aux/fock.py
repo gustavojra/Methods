@@ -17,12 +17,14 @@ class Det:
         self.order = len(a)
     
         # If a reference was given attribute a sign to the determinants
+        # The standard representation here is alpha > beta, i < j, and a < b
+
         if sq:
             
             [creA, creB] = self.exclusive(ref)
             [anhA, anhB] = ref.exclusive(self)
-            creA = sorted(creA)[::-1]
-            creB = sorted(creB)[::-1]
+            creA = sorted(creA, reverse = True)
+            creB = sorted(creB, reverse = True)
             anhA = sorted(anhA)
             anhB = sorted(anhB)
             molde = ref.copy()

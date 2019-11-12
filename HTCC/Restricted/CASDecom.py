@@ -1,4 +1,5 @@
 import numpy as np
+import time
 
 ##############################################################################
 ##############################################################################
@@ -29,7 +30,7 @@ def CASDecom(Ccas, determinants, ref, active_space):
 
     # Get number of doubly occupied and virtual orbitals from the reference determinant
 
-    ndocc = sum(ref.alpha_list())
+    ndocc = int(sum(ref.alpha_list()))
     nvir = abs(ref.order) - ndocc
 
     # Get the C0 coefficient, corresponding to the reference determinant
@@ -45,221 +46,149 @@ def CASDecom(Ccas, determinants, ref, active_space):
 
     Ccas = Ccas/C0
     
-    # Slice the CI list and determinants in excitation cases
+    # Create the arrays for amplitudes, inititally they will be used to store CI coefficients then they will
+    # be translated into CC amplitudes
 
-    C1dets = []
-    C2dets = []
-    C3dets = []
-    C4dets = []
-    C1 = []
-    C2 = []
-    C3 = []
-    C4 = []
-
-    for d,c in zip(determinants, Ccas):
-        if d - ref == 2:
-            C1.append(c)
-            C1dets.append(d)
-        if d - ref == 4:
-            C2.append(c)
-            C2dets.append(d)
-        if d - ref == 6:
-            C3.append(c)
-            C3dets.append(d)
-        if d - ref == 8:
-            C4.append(c)
-            C4dets.append(d)
-            
     CAS_T1 = np.zeros([ndocc, nvir])
-    
-    CAS_holes = []
-    for i,x in enumerate(active_space[0:ndocc]):
-        if x == 'a':
-            CAS_holes.append(i)
-    
-    CAS_particles = []
-    for i,x in enumerate(active_space[ndocc:]):
-        if x == 'a':
-            CAS_particles.append(i)
-    
     CAS_T2 = np.zeros([ndocc, ndocc, nvir, nvir])
-    
-    CAS_T3aba = np.zeros([ndocc, ndocc, ndocc, nvir, nvir, nvir])
-    
+    CAS_T3 = np.zeros([ndocc, ndocc, ndocc, nvir, nvir, nvir])
     CAS_T4abaa = np.zeros([ndocc, ndocc, ndocc, ndocc, nvir, nvir, nvir, nvir])
     CAS_T4abab = np.zeros([ndocc, ndocc, ndocc, ndocc, nvir, nvir, nvir, nvir])
-    
-    # Search for the appropriate coefficients using a model Determinant
-    
-    # Singles: Only the case (alpha -> alpha) is necessary
-    
-    for i in CAS_holes:
-        for a in CAS_particles:
-            search = ref.copy()
-        
-            # anh -> i
-            search.anh(i, spin=0)
-    
-            # cre -> a
-            search.cre(a+ndocc, spin=0)
-    
-            index = determinants.index(search)
-            CASdet = determinants[index]
-            # The phase guarentees that the determinant in the CI framework is the same as the one created in the CC framework
-            CAS_T1[i,a] = Ccas[index] * search.sign() * CASdet.sign()
-    
-    # Doubles: Only the case (alpha, beta -> alpha, beta) is necessary
-    
-    for i in CAS_holes:
-        for a in CAS_particles:
-            for j in CAS_holes:
-                for b in CAS_particles:
-                    search = ref.copy()
-    
-                    # anh -> i
-                    search.anh(i, spin=0)
-    
-                    # anh -> j
-                    search.anh(j, spin=1)
-    
-                    # cre -> b
-                    search.anh(b + ndocc, spin=1)
-    
-                    # cre -> a
-                    search.cre(a + ndocc, spin=0)
-    
-                    index = determinants.index(search)
-                    CASdet = determinants[index]
-                    # The phase guarentees that the determinant in the CI framework is the same as the one created in the CC framework
-                    CAS_T2[i,j,a,b] = Ccas[index] * search.sign() * CASdet.sign()
-    
-    # Triples. Spin case: aba -> aba
-    
-    for i in CAS_holes:
-        for a in CAS_particles:
-            for j in CAS_holes:
-                for b in CAS_particles:
-                    for k in CAS_holes:
-                        for c in CAS_particles:
-                            # Since ik and ac are alphas, they cannot be the same
-                            if i == k or a == c:
-                                continue
-                            search = ref.copy()
-    
-                            # anh -> i (alpha)
-                            search.anh(i, spin=0)
-    
-                            # anh -> j (beta)
-                            search.anh(j, spin=1)
-    
-                            # anh -> k (alpha)
-                            search.anh(k, spin=0)
-    
-                            # cre -> c (alpha)
-                            search.cre(c + ndocc, spin=0)
-    
-                            # cre -> b (beta)
-                            search.cre(b + ndocc, spin=1)
-    
-                            # cre -> a (alpha)
-                            search.cre(a + ndocc, spin=0)
-    
-                            index = determinants.index(search)
-                            CASdet = determinants[index]
-                            CAS_T3aba[i,j,k,a,b,c] = Ccas[index] * search.sign() * CASdet.sign()
-    
-    # Quadruples 
-    
-    ## First case: abaa -> abaa
-    
-    for i in CAS_holes:
-        for a in CAS_particles:
-            for j in CAS_holes:
-                for b in CAS_particles:
-                    for k in CAS_holes:
-                        for c in CAS_particles:
-                            for l in CAS_holes:
-                                for d in CAS_particles:
-                                    # Same spin indexes cannot be the same
-                                    if i == k or i == l or k == l:
-                                        continue
-                                    if a == c or a == d or c == d:
-                                        continue
-                                    search = ref.copy()
-    
-                                    # anh -> i (alpha)
-                                    search.anh(i, spin=0)
-    
-                                    # anh -> j (beta)
-                                    search.anh(j, spin=1)
-    
-                                    # anh -> k (alpha)
-                                    search.anh(k, spin=0)
-    
-                                    # anh -> l (alpha)
-                                    search.anh(l, spin=0)
-    
-                                    # cre -> d (alpha)
-                                    search.cre(d + ndocc, spin=0)
-    
-                                    # cre -> c (alpha)
-                                    search.cre(c + ndocc, spin=0)
-    
-                                    # cre -> b (beta)
-                                    search.cre(b + ndocc, spin=1)
-    
-                                    # cre -> a (alpha)
-                                    search.cre(a + ndocc, spin=0)
-    
-                                    index = determinants.index(search)
-                                    CASdet = determinants[index]
-                                    CAS_T4abaa[i,j,k,l,a,b,c,d] = Ccas[index] * search.sign() * CASdet.sign()
-    
-    ## Second case: abab -> abab
-    
-    for i in CAS_holes:
-        for a in CAS_particles:
-            for j in CAS_holes:
-                for b in CAS_particles:
-                    for k in CAS_holes:
-                        for c in CAS_particles:
-                            for l in CAS_holes:
-                                for d in CAS_particles:
-                                    # Same spin indexes cannot be the same
-                                    if i == k or j == l:
-                                        continue
-                                    if a == c or b == d:
-                                        continue
-                                    search = ref.copy()
-    
-                                    # anh -> i (alpha)
-                                    search.anh(i, spin=0)
-    
-                                    # anh -> j (beta)
-                                    search.anh(j, spin=1)
-    
-                                    # anh -> k (alpha)
-                                    search.anh(k, spin=0)
-    
-                                    # anh -> l (beta)
-                                    search.anh(l, spin=1)
-    
-                                    # cre -> d (beta)
-                                    search.cre(d + ndocc, spin=1)
-    
-                                    # cre -> c (alpha)
-                                    search.cre(c + ndocc, spin=0)
-    
-                                    # cre -> b (beta)
-                                    search.cre(b + ndocc, spin=1)
-    
-                                    # cre -> a (alpha)
-                                    search.cre(a + ndocc, spin=0)
-    
-                                    index = determinants.index(search)
-                                    CASdet = determinants[index]
-                                    CAS_T4abab[i,j,k,l,a,b,c,d] = Ccas[index] * search.sign() * CASdet.sign()
-    
+
+    # Runs through the determinants to classify them by excitation rank. Collect CI coefficient and excitation indexes.
+    t = time.time()
+
+    for det,ci in zip(determinants, Ccas):
+        if det - ref == 2:
+
+            # If it is a singly excited determinant both spins (i,a) should be the same. This is taken care of in the CASCI module
+            # We only collect the alpha excitation (i alpha -> a alpha) and save it on C1
+
+            i = ref.exclusive(det)
+            if i[0] != []:
+                i = i[0][0]
+                a = det.exclusive(ref)[0][0] - ndocc
+                CAS_T1[i,a] = ci
+
+        if det - ref == 4:
+
+            # For doubly excited determinants we collect the spin case where ij -> ab: alpha, beta -> alpha, beta
+            # Since the Det objects are constructed such that i < j and a < b and alpha < beta the sign should be correct already
+
+            [i,j] = ref.exclusive(det)
+            if i != [] and j != []:
+                [a,b] = det.exclusive(ref)
+                i, j = i[0], j[0]
+                a, b = a[0] - ndocc, b[0] - ndocc
+                CAS_T2[i,j,a,b] = ci
+
+        if det - ref == 6:
+
+            # For triply excited determinants we want to collect the case ijk -> abc: alpha, beta, alpha -> alpha, beta, alpha
+            # By default, CASCI used alpha, alpha, beta -> alpha, alpha, beta where i < j < k and a < b < c. We need to swap two
+            # indexes to get the desired determinat, that means that there is no sign change.
+            # We also need to consider permutations of i,k and a,c. Although they map to the same determinant in the CASCI, we need 
+            # to have these numbers in the T3 array for the CC framework since we are working with unrestricted arrays on einsum.
+
+            [ik, j] = ref.exclusive(det)
+            if len(ik) == 2:
+                [ac, b] = det.exclusive(ref)
+                ik = sorted(ik)
+                i, j, k = ik[0], j[0], ik[1]
+                ac = sorted(ac)
+                a, b, c = ac[0] - ndocc, b[0] - ndocc, ac[1] - ndocc
+                # Include all permutations P(ik)P(ac)
+                CAS_T3[i,j,k,a,b,c] = ci
+                CAS_T3[k,j,i,a,b,c] = -ci
+                CAS_T3[i,j,k,c,b,a] = -ci
+                CAS_T3[k,j,i,c,b,a] = ci
+
+        if det - ref == 8:
+
+            # For quadruply excited determinants we want two spin cases:
+            #    - a,b,a,a -> a,b,a,a
+            #    - a,b,a,b -> a,b,a,b
+            # where a means alpha, and b means beta (hopefully this is obvious, but lets be clear, right?)
+            # The default in CASCI is: a,a,b,b -> a,a,b,b and a,a,a,b -> a,a,a,b
+            # However, similarly to the T3 case we need to do a even number of permutations to get the desired determinants.
+            # Thus, no sign adjustment is needed, except for the permutations. For each case we have:
+            #    - a,b,a,a case: P(ik)P(il)P(kl)P(ac)P(ad)P(cd)
+            #    - a,b,a,b case: P(ik)P(jl)P(ac)P(bd)
+
+            [alphas, betas] = ref.exclusive(det)
+            if len(alphas) == 3:
+                # This is spin case: a,b,a,a
+                alphas = sorted(alphas)
+                i,j,k,l = alphas[0], betas[0], alphas[1], alphas[2]
+                [acd, b] = det.exclusive(ref)
+                acd = sorted(acd)
+                a, b, c, d = acd[0] - ndocc, b[0] - ndocc, acd[1] - ndocc, acd[2] - ndocc
+                # Include all permutations P(ik)P(il)P(kl)P(ac)P(ad)P(cd)
+                CAS_T4abaa[i,j,k,l,a,b,c,d] = ci
+                CAS_T4abaa[i,j,k,l,c,b,d,a] = ci
+                CAS_T4abaa[i,j,k,l,a,b,d,c] = -ci
+                CAS_T4abaa[i,j,k,l,c,b,a,d] = -ci
+                CAS_T4abaa[i,j,k,l,d,b,a,c] = ci
+                CAS_T4abaa[i,j,k,l,d,b,c,a] = -ci
+                CAS_T4abaa[k,j,i,l,c,b,d,a] = -ci
+                CAS_T4abaa[k,j,i,l,a,b,d,c] = ci
+                CAS_T4abaa[k,j,i,l,c,b,a,d] = ci
+                CAS_T4abaa[k,j,i,l,a,b,c,d] = -ci
+                CAS_T4abaa[k,j,i,l,d,b,a,c] = -ci
+                CAS_T4abaa[k,j,i,l,d,b,c,a] = ci
+                CAS_T4abaa[k,j,l,i,c,b,d,a] = ci
+                CAS_T4abaa[k,j,l,i,a,b,d,c] = -ci
+                CAS_T4abaa[k,j,l,i,c,b,a,d] = -ci
+                CAS_T4abaa[k,j,l,i,a,b,c,d] = ci
+                CAS_T4abaa[k,j,l,i,d,b,a,c] = ci
+                CAS_T4abaa[k,j,l,i,d,b,c,a] = -ci
+                CAS_T4abaa[l,j,k,i,c,b,d,a] = -ci
+                CAS_T4abaa[l,j,k,i,a,b,d,c] = ci
+                CAS_T4abaa[l,j,k,i,c,b,a,d] = ci
+                CAS_T4abaa[l,j,k,i,a,b,c,d] = -ci
+                CAS_T4abaa[l,j,k,i,d,b,a,c] = -ci
+                CAS_T4abaa[l,j,k,i,d,b,c,a] = ci
+                CAS_T4abaa[l,j,i,k,c,b,d,a] = ci
+                CAS_T4abaa[l,j,i,k,a,b,d,c] = -ci
+                CAS_T4abaa[l,j,i,k,c,b,a,d] = -ci
+                CAS_T4abaa[l,j,i,k,a,b,c,d] = ci
+                CAS_T4abaa[l,j,i,k,d,b,a,c] = ci
+                CAS_T4abaa[l,j,i,k,d,b,c,a] = -ci
+                CAS_T4abaa[i,j,l,k,c,b,d,a] = -ci
+                CAS_T4abaa[i,j,l,k,a,b,d,c] = ci
+                CAS_T4abaa[i,j,l,k,c,b,a,d] = ci
+                CAS_T4abaa[i,j,l,k,a,b,c,d] = -ci
+                CAS_T4abaa[i,j,l,k,d,b,a,c] = -ci
+                CAS_T4abaa[i,j,l,k,d,b,c,a] = ci
+
+            if len(alphas) == 2:
+                # This is spin case: a,b,a,b
+                alphas = sorted(alphas)
+                betas = sorted(betas)
+                i,j,k,l = alphas[0], betas[0], alphas[1], betas[1]
+                [ac, bd] = det.exclusive(ref)
+                ac = sorted(ac)
+                bd = sorted(bd)
+                a, b, c, d = ac[0] - ndocc, bd[0] - ndocc, ac[1] - ndocc, bd[1] - ndocc
+                # Include all permutations P(ik)P(jl)P(ac)P(bd)
+                CAS_T4abab[i,j,k,l,a,b,c,d] = ci
+                CAS_T4abab[i,j,k,l,a,d,c,b] = -ci
+                CAS_T4abab[i,j,k,l,c,d,a,b] = ci
+                CAS_T4abab[i,j,k,l,c,b,a,d] = -ci
+                CAS_T4abab[k,j,i,l,a,d,c,b] = ci
+                CAS_T4abab[k,j,i,l,a,b,c,d] = -ci
+                CAS_T4abab[k,j,i,l,c,d,a,b] = -ci
+                CAS_T4abab[k,j,i,l,c,b,a,d] = ci
+                CAS_T4abab[k,l,i,j,a,d,c,b] = -ci
+                CAS_T4abab[k,l,i,j,a,b,c,d] = ci
+                CAS_T4abab[k,l,i,j,c,d,a,b] = ci
+                CAS_T4abab[k,l,i,j,c,b,a,d] = -ci
+                CAS_T4abab[i,l,k,j,a,d,c,b] = ci
+                CAS_T4abab[i,l,k,j,a,b,c,d] = -ci
+                CAS_T4abab[i,l,k,j,c,d,a,b] = -ci
+                CAS_T4abab[i,l,k,j,c,b,a,d] = ci
+
+    print('Time for collection: {}'.format(time.time() - t))
     # Translate CI coefficients into CC amplitudes
     
     print('Translating CI coefficients into CC amplitudes...\n')
@@ -272,16 +201,16 @@ def CASDecom(Ccas, determinants, ref, active_space):
     
     # Triples
     
-    CAS_T3aba += - np.einsum('ia,jkbc -> ijkabc', CAS_T1, CAS_T2) \
+    CAS_T3 += - np.einsum('ia,jkbc -> ijkabc', CAS_T1, CAS_T2) \
                       + np.einsum('ic,kjab -> ijkabc', CAS_T1, CAS_T2) \
                       + np.einsum('ka,ijcb -> ijkabc', CAS_T1, CAS_T2) \
                       - np.einsum('kc,ijab -> ijkabc', CAS_T1, CAS_T2) \
                       - np.einsum('jb,ikac -> ijkabc', CAS_T1, T2aa)
     
-    CAS_T3aba += - np.einsum('ia,jb,kc -> ijkabc', CAS_T1, CAS_T1, CAS_T1) \
+    CAS_T3 += - np.einsum('ia,jb,kc -> ijkabc', CAS_T1, CAS_T1, CAS_T1) \
                       + np.einsum('ic,jb,ka -> ijkabc', CAS_T1, CAS_T1, CAS_T1) 
     
-    CAS_T3aaa = CAS_T3aba - np.einsum('ijkabc -> ikjabc', CAS_T3aba) - np.einsum('ijkabc -> jikabc', CAS_T3aba)
+    CAS_T3aaa = CAS_T3 - np.einsum('ijkabc -> ikjabc', CAS_T3) - np.einsum('ijkabc -> jikabc', CAS_T3)
     print('Translating quadruples...')
     # Quadruples
     
@@ -293,16 +222,16 @@ def CASDecom(Ccas, determinants, ref, active_space):
     print('... T1 * T3...')
     ### T1 * T3 terms
     
-    CAS_T4abaa += - np.einsum('ia, kjlcbd -> ijklabcd', CAS_T1, CAS_T3aba) \
-                       + np.einsum('ic, kjlabd -> ijklabcd', CAS_T1, CAS_T3aba) \
-                       - np.einsum('id, kjlabc -> ijklabcd', CAS_T1, CAS_T3aba) \
+    CAS_T4abaa += - np.einsum('ia, kjlcbd -> ijklabcd', CAS_T1, CAS_T3) \
+                       + np.einsum('ic, kjlabd -> ijklabcd', CAS_T1, CAS_T3) \
+                       - np.einsum('id, kjlabc -> ijklabcd', CAS_T1, CAS_T3) \
                        - np.einsum('jb, iklacd -> ijklabcd', CAS_T1, CAS_T3aaa) \
-                       + np.einsum('ka, ijlcbd -> ijklabcd', CAS_T1, CAS_T3aba) \
-                       - np.einsum('kc, ijlabd -> ijklabcd', CAS_T1, CAS_T3aba) \
-                       + np.einsum('kd, ijlabc -> ijklabcd', CAS_T1, CAS_T3aba) \
-                       - np.einsum('la, ijkcbd -> ijklabcd', CAS_T1, CAS_T3aba) \
-                       + np.einsum('lc, ijkabd -> ijklabcd', CAS_T1, CAS_T3aba) \
-                       - np.einsum('ld, ijkabc -> ijklabcd', CAS_T1, CAS_T3aba)
+                       + np.einsum('ka, ijlcbd -> ijklabcd', CAS_T1, CAS_T3) \
+                       - np.einsum('kc, ijlabd -> ijklabcd', CAS_T1, CAS_T3) \
+                       + np.einsum('kd, ijlabc -> ijklabcd', CAS_T1, CAS_T3) \
+                       - np.einsum('la, ijkcbd -> ijklabcd', CAS_T1, CAS_T3) \
+                       + np.einsum('lc, ijkabd -> ijklabcd', CAS_T1, CAS_T3) \
+                       - np.einsum('ld, ijkabc -> ijklabcd', CAS_T1, CAS_T3)
     
     print('... T2 * T2...')
     ### T2 * T2 terms
@@ -366,14 +295,14 @@ def CASDecom(Ccas, determinants, ref, active_space):
     ### T1 * T3 terms
     print('... T1 * T3...')
     
-    CAS_T4abab += - np.einsum('ia, jklbcd -> ijklabcd', CAS_T1, CAS_T3aba) \
-                       + np.einsum('ic, jklbad -> ijklabcd', CAS_T1, CAS_T3aba) \
-                       - np.einsum('jb, ilkadc -> ijklabcd', CAS_T1, CAS_T3aba) \
-                       + np.einsum('jd, ilkabc -> ijklabcd', CAS_T1, CAS_T3aba) \
-                       + np.einsum('ka, jilbcd -> ijklabcd', CAS_T1, CAS_T3aba) \
-                       - np.einsum('kc, jilbad -> ijklabcd', CAS_T1, CAS_T3aba) \
-                       + np.einsum('lb, ijkadc -> ijklabcd', CAS_T1, CAS_T3aba) \
-                       - np.einsum('ld, ijkabc -> ijklabcd', CAS_T1, CAS_T3aba)
+    CAS_T4abab += - np.einsum('ia, jklbcd -> ijklabcd', CAS_T1, CAS_T3) \
+                       + np.einsum('ic, jklbad -> ijklabcd', CAS_T1, CAS_T3) \
+                       - np.einsum('jb, ilkadc -> ijklabcd', CAS_T1, CAS_T3) \
+                       + np.einsum('jd, ilkabc -> ijklabcd', CAS_T1, CAS_T3) \
+                       + np.einsum('ka, jilbcd -> ijklabcd', CAS_T1, CAS_T3) \
+                       - np.einsum('kc, jilbad -> ijklabcd', CAS_T1, CAS_T3) \
+                       + np.einsum('lb, ijkadc -> ijklabcd', CAS_T1, CAS_T3) \
+                       - np.einsum('ld, ijkabc -> ijklabcd', CAS_T1, CAS_T3)
     
     print('... T2 * T2...')
     ### T2 * T2 terms
@@ -420,4 +349,4 @@ def CASDecom(Ccas, determinants, ref, active_space):
                        + np.einsum('ic,jb,ka,ld -> ijklabcd', CAS_T1, CAS_T1, CAS_T1, CAS_T1) \
                        - np.einsum('ic,jd,ka,lb -> ijklabcd', CAS_T1, CAS_T1, CAS_T1, CAS_T1)
 
-    return CAS_T1, CAS_T2, CAS_T3aba, CAS_T4abab, CAS_T4abaa
+    return CAS_T1, CAS_T2, CAS_T3, CAS_T4abab, CAS_T4abaa

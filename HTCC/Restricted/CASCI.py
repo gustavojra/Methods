@@ -42,15 +42,22 @@ from Hamiltonian import *
 def CASCI(active_space, nmo, nelec, OEI, TEI, show_prog = False):
 
     # Read active space and determine number of active electrons. 
-    # Format: sequence of letters ordered
+    # Standard Format: sequence of letters ordered
     # according to orbital energies. 
     # Legend:
     # o = frozen doubly occupied orbital
     # a = active orbital
     # u = frozen unnocupied orbital 
+    # Alternative formats:
+    # - List with active orbitals indexes
+    # - 'full' for a FCI computation
+    # - 'none' for a a empty active space, that is, no CAS is performed
 
     ndocc = int(nelec/2)
     nvir = nmo - ndocc
+
+    # For a list input "active list". If the orbital is in the active list it is considered active 'a'
+    # if not, it will be considered doubly occupied or unnocupied depending on the reference correspondence.
 
     if type(active_space) == list:
         indexes = copy.deepcopy(active_space)
@@ -62,7 +69,9 @@ def CASCI(active_space, nmo, nelec, OEI, TEI, show_prog = False):
             else:
                 active_space += hf_string[i]
 
-    # none is none
+    # 'none' produces an empty space, thus no CAS will be performed.
+    # Well, in reality it will be performed, but the Hamiltonian matrix
+    # will be 1x1.
 
     if active_space == 'none':
         active_space = 'o'*ndocc + 'u'*nvir
@@ -72,6 +81,12 @@ def CASCI(active_space, nmo, nelec, OEI, TEI, show_prog = False):
     if active_space == 'full':
         active_space = 'a'*nmo
 
+    # Creating a template string. Active orbitals are represented by {}
+    # Occupied orbitals are 1, and unnocupied 0. 
+    # For example: 11{}{}{}000 represents a system with 8 orbitals where the two lowest ones are frozen (doubly occupied)
+    # and the three highest one are frozen (unnocupied). There are 3 active orbitals.
+    # The number of active electron pairs is obtained as the number of electron pairs minus the number of doubly occupied orbitals ('o')
+    
     template_space = ''
     n_ac_orb = 0
     n_ac_elec_pair = int(nelec/2)
@@ -103,13 +118,21 @@ def CASCI(active_space, nmo, nelec, OEI, TEI, show_prog = False):
     print("Number of active orbitals: {}".format(n_ac_orb))
     print("Number of active electrons: {}\n".format(2*n_ac_elec_pair))
 
-    # Use permutations to generate strings that will represent excited determinants
+    # Produces a list of active electrons in active orbitals and get all permutations of it.
+    # For example. Say we have a template 11{}{}{}000 as in the example above. If the system contains 6 electrons
+    # we have one pair of active electrons. The list of active electrons will look like '100' and the permutations
+    # will be generated (as lists): ['1', '0', '0'], ['0', '1', '0'], and ['0', '0', '1'].
 
     print("Generating excitations...")
     perms = set(permutations('1'*n_ac_elec_pair + '0'*(n_ac_orb - n_ac_elec_pair)))
     print("Done.\n")
 
-    # Use the strings to generate Det objects. Use second quantization to attribute signs 
+    # Each permutation is then merged with the template above to generate a string used ot create a Determinant object
+    # For example. 11{}{}{}000 is combine with ['0','1', '0'] to produce an alpha/beta string 11010000.
+    # These strings are then combined to form various determinants
+
+    # The option 'sq' set as true will make the Det object to compare the newly create determinant with the reference.
+    # This is done to provide a sign/phase to the determinant consistent with second quantization operators
 
     determinants = []
     progress = 0
@@ -123,7 +146,9 @@ def CASCI(active_space, nmo, nelec, OEI, TEI, show_prog = False):
         tool.showout(progress, len(perms), 50, "Generating Determinants: ", file)
     file.write('\n')
     file.flush()
-    print("Number of determinants: {}".format(len(determinants)))
+    print("Number of determinants:                   {}".format(len(determinants)))
+    nelements = int((len(determinants)*(len(determinants)-1))/2) + len(determinants)
+    print("Number of matrix elements to be computed: {}".format(nelements))
 
     # Construct the Hamiltonian Matrix
     # Note: Input for two electron integral must be using Chemists' notation
