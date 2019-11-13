@@ -1,6 +1,5 @@
 import numpy as np
 import time
-import copy
 
 ##############################################################################
 ##############################################################################
@@ -60,7 +59,6 @@ def CASDecom(Ccas, determinants, ref, active_space):
     # Runs through the determinants to classify them by excitation rank. Collect CI coefficient and excitation indexes.
     t = time.time()
 
-    print('Collecting CI coefficients from CASCI eigenvector')
     for det,ci in zip(determinants, Ccas):
         if det - ref == 2:
 
@@ -192,41 +190,36 @@ def CASDecom(Ccas, determinants, ref, active_space):
                 CAS_T4abab[i,l,k,j,c,b,a,d] = ci
 
     print('Time for collection: {}'.format(time.time() - t))
-
     # Translate CI coefficients into CC amplitudes
     
     print('Translating CI coefficients into CC amplitudes...\n')
     
-    # Singles: equivalent to CI
+    # Singles: already done
     
     # Doubles
     CAS_T2 = CAS_T2 - np.einsum('ia,jb-> ijab', CAS_T1, CAS_T1)
-
-    ## Compute the spin case a,a -> a,a from the mixed spin case
-    T2aa = CAS_T2 - CAS_T2.transpose(1,0,2,3)
+    T2aa = CAS_T2 - np.einsum('ijab -> jiab', CAS_T2)
     
     # Triples
-    ## Taking advantage of permutation symmetry when possible
-
-    t1t2 = np.einsum('ia, jkbc -> ijkabc', CAS_T1, CAS_T2)
-    t1t1 = np.einsum('ia,jb,kc -> ijkabc', CAS_T1, CAS_T1, CAS_T1)
-
-    CAS_T3 += - t1t2                                         \
-              + t1t2.transpose(0,1,2,5,4,3)                  \
-              + t1t2.transpose(2,1,0,3,4,5)                  \
-              - t1t2.transpose(2,1,0,5,4,3)                  \
-              - np.einsum('jb,ikac -> ijkabc', CAS_T1, T2aa) \
-              - t1t1                                         \
-              + t1t1.transpose(0,1,2,5,4,3)
-
-    ### Compute the spin case a,a,a -> a,a,a from the mixed spin case
-    CAS_T3aaa = CAS_T3 - CAS_T3.transpose(0,2,1,3,4,5) - CAS_T3.transpose(1,0,2,3,4,5)
-
+    
+    CAS_T3 += - np.einsum('ia,jkbc -> ijkabc', CAS_T1, CAS_T2) \
+                      + np.einsum('ic,kjab -> ijkabc', CAS_T1, CAS_T2) \
+                      + np.einsum('ka,ijcb -> ijkabc', CAS_T1, CAS_T2) \
+                      - np.einsum('kc,ijab -> ijkabc', CAS_T1, CAS_T2) \
+                      - np.einsum('jb,ikac -> ijkabc', CAS_T1, T2aa)
+    
+    CAS_T3 += - np.einsum('ia,jb,kc -> ijkabc', CAS_T1, CAS_T1, CAS_T1) \
+                      + np.einsum('ic,jb,ka -> ijkabc', CAS_T1, CAS_T1, CAS_T1) 
+    
+    CAS_T3aaa = CAS_T3 - np.einsum('ijkabc -> ikjabc', CAS_T3) - np.einsum('ijkabc -> jikabc', CAS_T3)
+    print('Translating quadruples...')
     # Quadruples
     
     print('Spin case (ABAA -> ABAA)')
     ## First case abaa -> abaa
-
+    
+    CAS_T4abaa = CAS_T4abaa
+    
     print('... T1 * T3...')
     ### T1 * T3 terms
     
@@ -298,67 +291,64 @@ def CASDecom(Ccas, determinants, ref, active_space):
     print('Spin case (ABAB -> ABAB)')
     ## Second case: abab -> abab
     
+    CAS_T4_abab = CAS_T4abab
+    
     ### T1 * T3 terms
+    print('... T1 * T3...')
     
-    t1t3a = np.einsum('ia, jklbcd -> ijklabcd', CAS_T1, CAS_T3)
-    t1t3b = np.einsum('jd, ilkabc -> ijklabcd', CAS_T1, CAS_T3)
-    CAS_T4abab += - t1t3a                               \
-                  + t1t3a.transpose(0,1,2,3,6,5,4,7)    \
-                  - t1t3a.transpose(1,0,3,2,5,4,7,6)    \
-                  + t1t3b                               \
-                  + t1t3a.transpose(2,1,0,3,4,5,6,7)    \
-                  - t1t3a.transpose(2,1,0,3,6,5,4,7)    \
-                  + t1t3b.transpose(0,3,2,1,4,7,6,5)    \
-                  - t1t3b.transpose(0,3,2,1,4,5,6,7)
+    CAS_T4abab += - np.einsum('ia, jklbcd -> ijklabcd', CAS_T1, CAS_T3) \
+                       + np.einsum('ic, jklbad -> ijklabcd', CAS_T1, CAS_T3) \
+                       - np.einsum('jb, ilkadc -> ijklabcd', CAS_T1, CAS_T3) \
+                       + np.einsum('jd, ilkabc -> ijklabcd', CAS_T1, CAS_T3) \
+                       + np.einsum('ka, jilbcd -> ijklabcd', CAS_T1, CAS_T3) \
+                       - np.einsum('kc, jilbad -> ijklabcd', CAS_T1, CAS_T3) \
+                       + np.einsum('lb, ijkadc -> ijklabcd', CAS_T1, CAS_T3) \
+                       - np.einsum('ld, ijkabc -> ijklabcd', CAS_T1, CAS_T3)
     
+    print('... T2 * T2...')
     ### T2 * T2 terms
-
-    t2t2 = np.einsum('ijab, klcd -> ijklabcd', CAS_T2, CAS_T2)
-
-    CAS_T4abab += - t2t2                                                \
-                  + t2t2.transpose(0,1,2,3,4,7,6,5)                     \
-                  + t2t2.transpose(0,1,2,3,6,5,4,7)                     \
-                  - t2t2.transpose(0,1,2,3,6,7,4,5)                     \
-                  + t2t2.transpose(0,3,2,1,4,5,6,7)                     \
-                  - t2t2.transpose(0,3,2,1,6,5,4,7)                     \
-                  + t2t2.transpose(0,3,2,1,6,7,4,5)                     \
-                  - np.einsum('ilad, jkbc -> ijklabcd', CAS_T2, CAS_T2) \
-                  - np.einsum('ikac, jlbd -> ijklabcd', T2aa, T2aa) 
     
+    CAS_T4abab += - np.einsum('ijab, klcd -> ijklabcd', CAS_T2, CAS_T2) \
+                       + np.einsum('ijad, klcb -> ijklabcd', CAS_T2, CAS_T2) \
+                       + np.einsum('ijcb, klad -> ijklabcd', CAS_T2, CAS_T2) \
+                       - np.einsum('ijcd, klab -> ijklabcd', CAS_T2, CAS_T2) \
+                       - np.einsum('ikac, jlbd -> ijklabcd', T2aa, T2aa)               \
+                       + np.einsum('ilab, kjcd -> ijklabcd', CAS_T2, CAS_T2) \
+                       - np.einsum('ilad, jkbc -> ijklabcd', CAS_T2, CAS_T2) \
+                       - np.einsum('ilcb, kjad -> ijklabcd', CAS_T2, CAS_T2) \
+                       + np.einsum('ilcd, kjab -> ijklabcd', CAS_T2, CAS_T2) 
+    
+    print('... T1 * T1 * T3...')
     ### T1 * T1 * T2 terms
-
-    t1t1t2a = np.einsum('ia,jb,klcd -> ijklabcd', CAS_T1, CAS_T1, CAS_T2) 
-    t1t1t2b = np.einsum('jb,ka,ilcd -> ijklabcd', CAS_T1, CAS_T1, CAS_T2)
-
-    CAS_T4abab += - t1t1t2a                                                     \
-                  + t1t1t2a.transpose(0,1,2,3,4,7,6,5)                          \
-                  + t1t1t2a.transpose(0,3,2,1,4,5,6,7)                          \
-                  + t1t1t2a.transpose(0,1,2,3,6,5,4,7)                          \
-                  - t1t1t2a.transpose(0,1,2,3,6,7,4,5)                          \
-                  - t1t1t2a.transpose(0,3,2,1,6,5,4,7)                          \
-                  + t1t1t2a.transpose(0,3,2,1,6,7,4,5)                          \
-                  - t1t1t2a.transpose(2,3,0,1,4,5,6,7)                          \
-                  + t1t1t2a.transpose(2,3,0,1,4,7,6,5)                          \
-                  + t1t1t2a.transpose(2,3,0,1,6,5,4,7)                          \
-                  - t1t1t2a.transpose(2,3,0,1,6,7,4,5)                          \
-                  + t1t1t2b                                                     \
-                  - t1t1t2b.transpose(0,1,2,3,6,5,4,7)                          \
-                  - t1t1t2b.transpose(0,1,2,3,4,7,6,5)                          \
-                  + t1t1t2b.transpose(0,1,2,3,6,7,4,5)                          \
-                  - t1t1t2b.transpose(2,3,0,1,4,7,6,5)                          \
-                  - np.einsum('ia,kc,jlbd -> ijklabcd', CAS_T1, CAS_T1, T2aa)   \
-                  + np.einsum('ic,ka,jlbd -> ijklabcd', CAS_T1, CAS_T1, T2aa)   \
-                  - np.einsum('jb,ld,ikac -> ijklabcd', CAS_T1, CAS_T1, T2aa)   \
-                  + np.einsum('jd,lb,ikac -> ijklabcd', CAS_T1, CAS_T1, T2aa)   
-
+    
+    CAS_T4abab += - np.einsum('ia,jb,klcd -> ijklabcd', CAS_T1, CAS_T1, CAS_T2) \
+                       + np.einsum('ia,jd,klcb -> ijklabcd', CAS_T1, CAS_T1, CAS_T2) \
+                       - np.einsum('ia,kc,jlbd -> ijklabcd', CAS_T1, CAS_T1, T2aa)        \
+                       + np.einsum('ia,lb,kjcd -> ijklabcd', CAS_T1, CAS_T1, CAS_T2) \
+                       - np.einsum('ia,ld,jkbc -> ijklabcd', CAS_T1, CAS_T1, CAS_T2) \
+                       + np.einsum('ic,jb,klad -> ijklabcd', CAS_T1, CAS_T1, CAS_T2) \
+                       - np.einsum('ic,jd,klab -> ijklabcd', CAS_T1, CAS_T1, CAS_T2) \
+                       + np.einsum('ic,ka,jlbd -> ijklabcd', CAS_T1, CAS_T1, T2aa)        \
+                       - np.einsum('ic,lb,kjad -> ijklabcd', CAS_T1, CAS_T1, CAS_T2) \
+                       + np.einsum('ic,ld,kjab -> ijklabcd', CAS_T1, CAS_T1, CAS_T2) \
+                       + np.einsum('jb,ka,ilcd -> ijklabcd', CAS_T1, CAS_T1, CAS_T2) \
+                       - np.einsum('jb,kc,ilad -> ijklabcd', CAS_T1, CAS_T1, CAS_T2) \
+                       - np.einsum('jb,ld,ikac -> ijklabcd', CAS_T1, CAS_T1, T2aa)        \
+                       - np.einsum('jd,ka,ilcb -> ijklabcd', CAS_T1, CAS_T1, CAS_T2) \
+                       + np.einsum('jd,kc,ilab -> ijklabcd', CAS_T1, CAS_T1, CAS_T2) \
+                       + np.einsum('jd,lb,ikac -> ijklabcd', CAS_T1, CAS_T1, T2aa)        \
+                       - np.einsum('ka,lb,ijcd -> ijklabcd', CAS_T1, CAS_T1, CAS_T2) \
+                       + np.einsum('ka,ld,ijcb -> ijklabcd', CAS_T1, CAS_T1, CAS_T2) \
+                       + np.einsum('kc,lb,ijad -> ijklabcd', CAS_T1, CAS_T1, CAS_T2) \
+                       - np.einsum('kc,ld,ijab -> ijklabcd', CAS_T1, CAS_T1, CAS_T2) 
+    
+    print('... T1 * T1 * T1 * T1...')
     ### T1 * T1 * T1 * T1 terms
     
-    t1t1t1t1 = np.einsum('ia,jb,kc,ld -> ijklabcd', CAS_T1, CAS_T1, CAS_T1, CAS_T1)
-
-    CAS_T4abab += - t1t1t1t1                            \
-                  + t1t1t1t1.transpose(0,1,2,3,4,7,6,5) \
-                  + t1t1t1t1.transpose(0,1,2,3,6,5,4,7) \
-                  - t1t1t1t1.transpose(0,1,2,3,6,7,4,5) 
+    CAS_T4abab += - np.einsum('ia,jb,kc,ld -> ijklabcd', CAS_T1, CAS_T1, CAS_T1, CAS_T1) \
+                       + np.einsum('ia,jd,kc,lb -> ijklabcd', CAS_T1, CAS_T1, CAS_T1, CAS_T1) \
+                       + np.einsum('ic,jb,ka,ld -> ijklabcd', CAS_T1, CAS_T1, CAS_T1, CAS_T1) \
+                       - np.einsum('ic,jd,ka,lb -> ijklabcd', CAS_T1, CAS_T1, CAS_T1, CAS_T1)
 
     print('CASDecom runtime: {}'.format(time.time() - t))
     return CAS_T1, CAS_T2, CAS_T3, CAS_T4abab, CAS_T4abaa

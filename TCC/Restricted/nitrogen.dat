@@ -1,7 +1,7 @@
 import os
 import sys
 import numpy as np
-from HTCCSD import HTCCSD
+from TCCSD import TCCSD
 
 molecule mol {
     unit bohr
@@ -22,10 +22,9 @@ set {
     GUESS         READ
 }
 
-#X = HTCCSD(mol)
+X = TCCSD(mol)
 
-#X.HTCCSD([4,5,6,7,8,9], CC_CONV=8)
+X.TCCSD([4,5,6,7,8,9], CC_CONV=8)
 
-#print('CAS energy:   {:<5.10f}'.format(X.Ecas))
-#print('CCSD Energy: {:<5.10f}'.format(energy('ccsd')))
-print('CCSD(T) Energy: {:<5.10f}'.format(energy('ccsd(t)')))
+print('CAS energy:   {:<5.10f}'.format(X.Ecas))
+print('CCSD Energy: {:<5.10f}'.format(energy('ccsd')))
