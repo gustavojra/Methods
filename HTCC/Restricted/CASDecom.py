@@ -13,16 +13,14 @@ import copy
 ##     Inputs:  List with CI coefficients (Ccas);                           ##
 ##              Corresponding determinants (determinants) as Det            ##
 ##              objects from fock module;                                   ##
-##              Reference determinant (ref) as a Det object;                ##                
-##              Active Space (active_space) where the determinats           ##
-##              were generated, following format used in the CASCI module.  ##
+##              Reference determinant (ref) as a Det object.                ##                
 ##                                                                          ##
 ##     Outputs: Translated amplitudes from CASCI coeffients:                ##
 ##          - T1;                                                           ## 
 ##          - T2(alpha, beta -> alpha, beta);                               ##
 ##          - T3(alpha, beta, alpha -> alpha, beta, alpha);                 ##
 ##          - T4(alpha, beta, alpha, alpha -> alpha, beta, alpha, alpha);   ##
-##          - T4(alpha, beta, alpha, beta -> alpha, beta, alpha, beta);     ##
+##          - T4(alpha, beta, alpha, beta -> alpha, beta, alpha, beta).     ##
 ##                                                                          ##
 ##############################################################################
 ##############################################################################
@@ -51,11 +49,11 @@ def CASDecom(Ccas, determinants, ref, active_space):
     # Create the arrays for amplitudes, inititally they will be used to store CI coefficients then they will
     # be translated into CC amplitudes
 
-    CAS_T1 = np.zeros([ndocc, nvir])
-    CAS_T2 = np.zeros([ndocc, ndocc, nvir, nvir])
-    CAS_T3 = np.zeros([ndocc, ndocc, ndocc, nvir, nvir, nvir])
-    CAS_T4abaa = np.zeros([ndocc, ndocc, ndocc, ndocc, nvir, nvir, nvir, nvir])
-    CAS_T4abab = np.zeros([ndocc, ndocc, ndocc, ndocc, nvir, nvir, nvir, nvir])
+    T1 = np.zeros([ndocc, nvir])
+    T2 = np.zeros([ndocc, ndocc, nvir, nvir])
+    T3 = np.zeros([ndocc, ndocc, ndocc, nvir, nvir, nvir])
+    T4abaa = np.zeros([ndocc, ndocc, ndocc, ndocc, nvir, nvir, nvir, nvir])
+    T4abab = np.zeros([ndocc, ndocc, ndocc, ndocc, nvir, nvir, nvir, nvir])
 
     # Runs through the determinants to classify them by excitation rank. Collect CI coefficient and excitation indexes.
     t = time.time()
@@ -71,7 +69,7 @@ def CASDecom(Ccas, determinants, ref, active_space):
             if i[0] != []:
                 i = i[0][0]
                 a = det.exclusive(ref)[0][0] - ndocc
-                CAS_T1[i,a] = ci
+                T1[i,a] = ci
 
         if det - ref == 4:
 
@@ -83,7 +81,7 @@ def CASDecom(Ccas, determinants, ref, active_space):
                 [a,b] = det.exclusive(ref)
                 i, j = i[0], j[0]
                 a, b = a[0] - ndocc, b[0] - ndocc
-                CAS_T2[i,j,a,b] = ci
+                T2[i,j,a,b] = ci
 
         if det - ref == 6:
 
@@ -101,19 +99,19 @@ def CASDecom(Ccas, determinants, ref, active_space):
                 ac = sorted(ac)
                 a, b, c = ac[0] - ndocc, b[0] - ndocc, ac[1] - ndocc
                 # Include all permutations P(ik)P(ac)
-                CAS_T3[i,j,k,a,b,c] = ci
-                CAS_T3[k,j,i,a,b,c] = -ci
-                CAS_T3[i,j,k,c,b,a] = -ci
-                CAS_T3[k,j,i,c,b,a] = ci
+                T3[i,j,k,a,b,c] =  ci
+                T3[k,j,i,a,b,c] = -ci
+                T3[i,j,k,c,b,a] = -ci
+                T3[k,j,i,c,b,a] =  ci
 
         if det - ref == 8:
 
             # For quadruply excited determinants we want two spin cases:
             #    - a,b,a,a -> a,b,a,a
             #    - a,b,a,b -> a,b,a,b
-            # where a means alpha, and b means beta (hopefully this is obvious, but lets be clear, right?)
+            # where 'a' means alpha, and 'b' means beta.
             # The default in CASCI is: a,a,b,b -> a,a,b,b and a,a,a,b -> a,a,a,b
-            # However, similarly to the T3 case we need to do a even number of permutations to get the desired determinants.
+            # However, similarly to the T3 case, we need to do a even number of permutations to get the desired determinants.
             # Thus, no sign adjustment is needed, except for the permutations. For each case we have:
             #    - a,b,a,a case: P(ik)P(il)P(kl)P(ac)P(ad)P(cd)
             #    - a,b,a,b case: P(ik)P(jl)P(ac)P(bd)
@@ -127,42 +125,42 @@ def CASDecom(Ccas, determinants, ref, active_space):
                 acd = sorted(acd)
                 a, b, c, d = acd[0] - ndocc, b[0] - ndocc, acd[1] - ndocc, acd[2] - ndocc
                 # Include all permutations P(ik)P(il)P(kl)P(ac)P(ad)P(cd)
-                CAS_T4abaa[i,j,k,l,a,b,c,d] = ci
-                CAS_T4abaa[i,j,k,l,c,b,d,a] = ci
-                CAS_T4abaa[i,j,k,l,a,b,d,c] = -ci
-                CAS_T4abaa[i,j,k,l,c,b,a,d] = -ci
-                CAS_T4abaa[i,j,k,l,d,b,a,c] = ci
-                CAS_T4abaa[i,j,k,l,d,b,c,a] = -ci
-                CAS_T4abaa[k,j,i,l,c,b,d,a] = -ci
-                CAS_T4abaa[k,j,i,l,a,b,d,c] = ci
-                CAS_T4abaa[k,j,i,l,c,b,a,d] = ci
-                CAS_T4abaa[k,j,i,l,a,b,c,d] = -ci
-                CAS_T4abaa[k,j,i,l,d,b,a,c] = -ci
-                CAS_T4abaa[k,j,i,l,d,b,c,a] = ci
-                CAS_T4abaa[k,j,l,i,c,b,d,a] = ci
-                CAS_T4abaa[k,j,l,i,a,b,d,c] = -ci
-                CAS_T4abaa[k,j,l,i,c,b,a,d] = -ci
-                CAS_T4abaa[k,j,l,i,a,b,c,d] = ci
-                CAS_T4abaa[k,j,l,i,d,b,a,c] = ci
-                CAS_T4abaa[k,j,l,i,d,b,c,a] = -ci
-                CAS_T4abaa[l,j,k,i,c,b,d,a] = -ci
-                CAS_T4abaa[l,j,k,i,a,b,d,c] = ci
-                CAS_T4abaa[l,j,k,i,c,b,a,d] = ci
-                CAS_T4abaa[l,j,k,i,a,b,c,d] = -ci
-                CAS_T4abaa[l,j,k,i,d,b,a,c] = -ci
-                CAS_T4abaa[l,j,k,i,d,b,c,a] = ci
-                CAS_T4abaa[l,j,i,k,c,b,d,a] = ci
-                CAS_T4abaa[l,j,i,k,a,b,d,c] = -ci
-                CAS_T4abaa[l,j,i,k,c,b,a,d] = -ci
-                CAS_T4abaa[l,j,i,k,a,b,c,d] = ci
-                CAS_T4abaa[l,j,i,k,d,b,a,c] = ci
-                CAS_T4abaa[l,j,i,k,d,b,c,a] = -ci
-                CAS_T4abaa[i,j,l,k,c,b,d,a] = -ci
-                CAS_T4abaa[i,j,l,k,a,b,d,c] = ci
-                CAS_T4abaa[i,j,l,k,c,b,a,d] = ci
-                CAS_T4abaa[i,j,l,k,a,b,c,d] = -ci
-                CAS_T4abaa[i,j,l,k,d,b,a,c] = -ci
-                CAS_T4abaa[i,j,l,k,d,b,c,a] = ci
+                T4abaa[i,j,k,l,a,b,c,d] =  ci
+                T4abaa[i,j,k,l,c,b,d,a] =  ci
+                T4abaa[i,j,k,l,a,b,d,c] = -ci
+                T4abaa[i,j,k,l,c,b,a,d] = -ci
+                T4abaa[i,j,k,l,d,b,a,c] =  ci
+                T4abaa[i,j,k,l,d,b,c,a] = -ci
+                T4abaa[k,j,i,l,c,b,d,a] = -ci
+                T4abaa[k,j,i,l,a,b,d,c] =  ci
+                T4abaa[k,j,i,l,c,b,a,d] =  ci
+                T4abaa[k,j,i,l,a,b,c,d] = -ci
+                T4abaa[k,j,i,l,d,b,a,c] = -ci
+                T4abaa[k,j,i,l,d,b,c,a] =  ci
+                T4abaa[k,j,l,i,c,b,d,a] =  ci
+                T4abaa[k,j,l,i,a,b,d,c] = -ci
+                T4abaa[k,j,l,i,c,b,a,d] = -ci
+                T4abaa[k,j,l,i,a,b,c,d] =  ci
+                T4abaa[k,j,l,i,d,b,a,c] =  ci
+                T4abaa[k,j,l,i,d,b,c,a] = -ci
+                T4abaa[l,j,k,i,c,b,d,a] = -ci
+                T4abaa[l,j,k,i,a,b,d,c] =  ci
+                T4abaa[l,j,k,i,c,b,a,d] =  ci
+                T4abaa[l,j,k,i,a,b,c,d] = -ci
+                T4abaa[l,j,k,i,d,b,a,c] = -ci
+                T4abaa[l,j,k,i,d,b,c,a] =  ci
+                T4abaa[l,j,i,k,c,b,d,a] =  ci
+                T4abaa[l,j,i,k,a,b,d,c] = -ci
+                T4abaa[l,j,i,k,c,b,a,d] = -ci
+                T4abaa[l,j,i,k,a,b,c,d] =  ci
+                T4abaa[l,j,i,k,d,b,a,c] =  ci
+                T4abaa[l,j,i,k,d,b,c,a] = -ci
+                T4abaa[i,j,l,k,c,b,d,a] = -ci
+                T4abaa[i,j,l,k,a,b,d,c] =  ci
+                T4abaa[i,j,l,k,c,b,a,d] =  ci
+                T4abaa[i,j,l,k,a,b,c,d] = -ci
+                T4abaa[i,j,l,k,d,b,a,c] = -ci
+                T4abaa[i,j,l,k,d,b,c,a] =  ci
 
             if len(alphas) == 2:
                 # This is spin case: a,b,a,b
@@ -174,24 +172,57 @@ def CASDecom(Ccas, determinants, ref, active_space):
                 bd = sorted(bd)
                 a, b, c, d = ac[0] - ndocc, bd[0] - ndocc, ac[1] - ndocc, bd[1] - ndocc
                 # Include all permutations P(ik)P(jl)P(ac)P(bd)
-                CAS_T4abab[i,j,k,l,a,b,c,d] = ci
-                CAS_T4abab[i,j,k,l,a,d,c,b] = -ci
-                CAS_T4abab[i,j,k,l,c,d,a,b] = ci
-                CAS_T4abab[i,j,k,l,c,b,a,d] = -ci
-                CAS_T4abab[k,j,i,l,a,d,c,b] = ci
-                CAS_T4abab[k,j,i,l,a,b,c,d] = -ci
-                CAS_T4abab[k,j,i,l,c,d,a,b] = -ci
-                CAS_T4abab[k,j,i,l,c,b,a,d] = ci
-                CAS_T4abab[k,l,i,j,a,d,c,b] = -ci
-                CAS_T4abab[k,l,i,j,a,b,c,d] = ci
-                CAS_T4abab[k,l,i,j,c,d,a,b] = ci
-                CAS_T4abab[k,l,i,j,c,b,a,d] = -ci
-                CAS_T4abab[i,l,k,j,a,d,c,b] = ci
-                CAS_T4abab[i,l,k,j,a,b,c,d] = -ci
-                CAS_T4abab[i,l,k,j,c,d,a,b] = -ci
-                CAS_T4abab[i,l,k,j,c,b,a,d] = ci
+                T4abab[i,j,k,l,a,b,c,d] =  ci
+                T4abab[i,j,k,l,a,d,c,b] = -ci
+                T4abab[i,j,k,l,c,d,a,b] =  ci
+                T4abab[i,j,k,l,c,b,a,d] = -ci
+                T4abab[k,j,i,l,a,d,c,b] =  ci
+                T4abab[k,j,i,l,a,b,c,d] = -ci
+                T4abab[k,j,i,l,c,d,a,b] = -ci
+                T4abab[k,j,i,l,c,b,a,d] =  ci
+                T4abab[k,l,i,j,a,d,c,b] = -ci
+                T4abab[k,l,i,j,a,b,c,d] =  ci
+                T4abab[k,l,i,j,c,d,a,b] =  ci
+                T4abab[k,l,i,j,c,b,a,d] = -ci
+                T4abab[i,l,k,j,a,d,c,b] =  ci
+                T4abab[i,l,k,j,a,b,c,d] = -ci
+                T4abab[i,l,k,j,c,d,a,b] = -ci
+                T4abab[i,l,k,j,c,b,a,d] =  ci
+
 
     print('Time for collection: {}'.format(time.time() - t))
+
+    # Create slices of the big T arrays. Most of these arrays are going to be zeros, thus we only need the active part of it 
+    # for the next step. This reduces the cost of using eigsum.
+
+    active_core = 0
+    for x in active_space:
+        if x == 'o':
+            active_core += 1
+        else:
+            break
+
+    active_virtual = nvir
+    for x in active_space[::-1]:
+        if x == 'u':
+            active_virtual -= 1
+        else:
+            break
+
+    h = slice(active_core, ndocc)
+    p = slice(0, active_virtual)
+
+    #CAS_T1     = T1[h,p]
+    #CAS_T2     = T2[h,h,p,p]
+    #CAS_T3     = T3[h,h,h,p,p,p]
+    #CAS_T4abaa = T4abaa[h,h,h,h,p,p,p,p]
+    #CAS_T4abab = T4abab[h,h,h,h,p,p,p,p]
+
+    CAS_T1     = T1
+    CAS_T2     = T2
+    CAS_T3     = T3
+    CAS_T4abaa = T4abaa
+    CAS_T4abab = T4abab
 
     # Translate CI coefficients into CC amplitudes
     
@@ -200,7 +231,16 @@ def CASDecom(Ccas, determinants, ref, active_space):
     # Singles: equivalent to CI
     
     # Doubles
-    CAS_T2 = CAS_T2 - np.einsum('ia,jb-> ijab', CAS_T1, CAS_T1)
+    altCAS_T2 = CAS_T2 - np.einsum('ia,jb-> ijab', CAS_T1, CAS_T1, optimize='optimal')
+
+    #for i in range(ndocc):
+    #    for j in range(ndocc):
+    #        for a in range(nvir):
+    #            for b in range(nvir):
+    #                CAS_T2[i,j,a,b] = CAS_T2[i,j,a,b] - CAS_T1[i,a]*CAS_T1[j,b]
+
+    CAS_T2 = altCAS_T2
+
 
     ## Compute the spin case a,a -> a,a from the mixed spin case
     T2aa = CAS_T2 - CAS_T2.transpose(1,0,2,3)
@@ -224,10 +264,8 @@ def CASDecom(Ccas, determinants, ref, active_space):
 
     # Quadruples
     
-    print('Spin case (ABAA -> ABAA)')
     ## First case abaa -> abaa
 
-    print('... T1 * T3...')
     ### T1 * T3 terms
     
     t1t3a = np.einsum('ia,kjlcbd -> ijklabcd', CAS_T1, CAS_T3) 
@@ -244,7 +282,6 @@ def CASDecom(Ccas, determinants, ref, active_space):
                   + t1t3b.transpose(0,1,3,2,4,5,7,6)                       \
                   - t1t3b.transpose(0,1,3,2,4,5,6,7)
     
-    print('... T2 * T2...')
     ### T2 * T2 terms
     
     t2t2a = np.einsum('ijab, klcd -> ijklabcd', CAS_T2, T2aa)
@@ -371,4 +408,5 @@ def CASDecom(Ccas, determinants, ref, active_space):
                   - t1t1t1t1.transpose(0,1,2,3,6,7,4,5) 
 
     print('CASDecom runtime: {}'.format(time.time() - t))
-    return CAS_T1, CAS_T2, CAS_T3, CAS_T4abab, CAS_T4abaa
+
+    return T1, T2, T3, T4abab, T4abaa

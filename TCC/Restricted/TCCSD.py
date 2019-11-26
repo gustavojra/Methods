@@ -299,6 +299,7 @@ class TCCSD:
         self.internal_T1 = np.zeros([self.ndocc, self.nvir])
         self.internal_T2 = np.zeros([self.ndocc, self.ndocc, self.nvir, self.nvir])
 
+
         # Search for the appropriate coefficients using a model Determinant
 
         # Singles

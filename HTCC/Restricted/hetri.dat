@@ -24,7 +24,7 @@ set {
 
 X = HTCCSD(mol)
 
-X.HTCCSD('full', MP2_GUESS=True,CC_CONV=12)
+X.HTCCSD('full', CC_CONV = 10)
 
 print('CAS energy:   {:<5.10f}'.format(X.Ecas))
 print('CCSD Energy:  {:<5.10f}'.format(energy('ccsd')))

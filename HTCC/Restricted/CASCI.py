@@ -3,6 +3,7 @@ import scipy.linalg as la
 import os
 import sys
 import copy
+import time
 from itertools import permutations
 
 file_dir = os.path.dirname('../../Aux/')
@@ -10,6 +11,7 @@ sys.path.append(file_dir)
 
 import tools as tool
 from fock import Det
+from davidson import Davidson
 from Hamiltonian import *
 
 ##############################################################################
@@ -39,7 +41,7 @@ from Hamiltonian import *
 ##############################################################################
 ##############################################################################
          
-def CASCI(active_space, nmo, nelec, OEI, TEI, show_prog = False):
+def CASCI(active_space, nmo, nelec, OEI, TEI, show_prog = False, davidson = False):
 
     # Read active space and determine number of active electrons. 
     # Standard Format: sequence of letters ordered
@@ -52,6 +54,8 @@ def CASCI(active_space, nmo, nelec, OEI, TEI, show_prog = False):
     # - List with active orbitals indexes
     # - 'full' for a FCI computation
     # - 'none' for a a empty active space, that is, no CAS is performed
+
+    print('\n --------- CASCI STARTED --------- \n')
 
     ndocc = int(nelec/2)
     nvir = nmo - ndocc
@@ -156,9 +160,19 @@ def CASCI(active_space, nmo, nelec, OEI, TEI, show_prog = False):
     H = get_H(determinants, OEI, TEI.swapaxes(1,2), v = True, t = True)
 
     # Diagonalize the Hamiltonian Matrix
-
     print("Diagonalizing Hamiltonian Matrix")
-    E, Ccas = la.eigh(H)
-    Ecas = E[0]
-    Ccas = Ccas[:,0]
+
+    t = time.time()
+
+    # Matrices smaller than 100 x 100 will be fully diagonalize using eigh
+    if davidson and len(H) > 100:
+        print('Using Davidson solver')
+        Ecas, Ccas = Davidson(H, kmax=100)
+    else:
+        print('Using Numpy Linear Algebra')
+        E, Ccas = la.eigh(H)
+        Ecas = E[0]
+        Ccas = Ccas[:,0]
+
+    print('Diagonalization time: {}'.format(time.time()-t))
     return Ecas, Ccas, ref, determinants, active_space

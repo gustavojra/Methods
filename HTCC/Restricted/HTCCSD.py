@@ -206,8 +206,6 @@ class HTCCSD:
         ############### STEP 1 ###############
         ##############  CASCI  ###############
 
-        print('------- COMPLETE ACTIVE SPACE CONFIGURATION INTERACTION STARTED -------\n')
-
         # Compute CASCI with the given active space
 
         self.Ecas, self.Ccas, self.ref, self.determinants, active_space = \
@@ -266,7 +264,7 @@ class HTCCSD:
         self.T4onT2 += np.einsum('ijab -> jiba', self.T4onT2)
 
         self.T4onT2 = (1.0/4.0)*self.T4onT2 + np.einsum('mnef, ijmnabef -> ijab', self.Vint[o,o,v,v], self.T4abab)
-        
+
         ############### STEP 4 ###############
         ###############  CCSD  ###############
 
