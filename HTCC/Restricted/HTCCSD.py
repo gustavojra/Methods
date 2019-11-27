@@ -10,6 +10,9 @@ from itertools import permutations
 file_dir = os.path.dirname('../../Aux/')
 sys.path.append(file_dir)
 
+file_dir = os.path.dirname('../../ecCC/Restricted/Modules/')
+sys.path.append(file_dir)
+
 from tools import *
 from ampcomp import tcompare
 from CASCI import CASCI
@@ -184,7 +187,7 @@ class HTCCSD:
         # Apply permutation
         self.T3onT2sec += np.einsum('ijab -> jiba', self.T3onT2sec)
 
-    def HTCCSD(self, active_space='', CC_CONV=6, CC_MAXITER=50, MP2_GUESS=False, RELAX_T3T1=True):
+    def HTCCSD(self, active_space='', CC_CONV=6, CC_MAXITER=50, E_CONV = 8, MP2_GUESS=False, RELAX_T3T1=True):
 
         # This is the main function in this code. After initializing the class object you need to call this
         # function to compute TCC energies. Thus, your Psi4 input needs to contain:
@@ -209,7 +212,7 @@ class HTCCSD:
         # Compute CASCI with the given active space
 
         self.Ecas, self.Ccas, self.ref, self.determinants, active_space = \
-            CASCI(active_space, nmo=self.nmo, nelec=self.nelec, OEI=self.h, TEI=self.Vint) 
+            CASCI(active_space, nelec=self.nelec, OEI=self.h, TEI=self.Vint, return_as = True)
 
         self.Ecas = self.Ecas + self.Vnuc
 
@@ -274,14 +277,11 @@ class HTCCSD:
         t = time.time()
         self.D  = np.zeros([self.ndocc, self.ndocc, self.nvir, self.nvir])
         self.d  = np.zeros([self.ndocc, self.nvir])
-        
-        for i,ei in enumerate(self.eps[o]):
-            for j,ej in enumerate(self.eps[o]):
-                for a,ea in enumerate(self.eps[v]):
+        new = np.newaxis
+
         # Note that G. E. Scuseria et al. used a non conventional def. of D(i,a): ea - ei. Other refs will define this as (ei - ea)
-                    self.d[i,a] = 1/(ea - ei)
-                    for b,eb in enumerate(self.eps[v]):
-                        self.D[i,j,a,b] = 1/(ei + ej - ea - eb)
+        self.d = 1.0/(self.eps[new, v] - self.eps[o, new])
+        self.D = 1.0/(self.eps[o, new, new, new] + self.eps[new, o, new, new] - self.eps[new, new, v, new] - self.eps[new, new, new, v])
 
         print('Done. Time required: {:.5f} seconds'.format(time.time() - t))
         t = time.time()
@@ -297,10 +297,15 @@ class HTCCSD:
             
         self.r1 = 1
         self.r2 = 1
+        dE      = 1
         LIM = 10**(-CC_CONV)
+        ELIM = 10**(-E_CONV)
         ite = 0
-        
-        while self.r2 > LIM or self.r1 > LIM:
+
+        print('\n Starting CCSD Iterations')
+        print('='*36)
+
+        while self.r2 > LIM or self.r1 > LIM or abs(dE) > ELIM:
             ite += 1
             if ite > CC_MAXITER:
                 raise NameError("CC Equations did not converge in {} iterations".format(CC_MAXITER))
@@ -309,14 +314,13 @@ class HTCCSD:
             self.T1_T2_Update(RELAX_T3T1 = RELAX_T3T1)
             self.cc_energy()
             dE = self.Ecc - Eold
-            print('-'*50)
             print("Iteration {}".format(ite))
-            print("CC Correlation energy: {:<5.10f}".format(self.Ecc))
+            print("Correlation energy:    {:<5.10f}".format(self.Ecc))
             print("Energy change:         {:<5.10f}".format(dE))
             print("T1 Residue:            {:>13.2E}".format(self.r1))
             print("T2 Residue:            {:>13.2E}".format(self.r2))
             print("Time required (s):     {:< 5.10f}".format(time.time() - t))
-            print('-'*50)
+            print('='*36)
         
         self.Ecc = self.Ecc + self.Escf
 

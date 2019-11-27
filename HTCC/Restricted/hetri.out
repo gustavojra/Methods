@@ -23,9 +23,9 @@
     -----------------------------------------------------------------------
 
 
-    Psi4 started on: Monday, 25 November 2019 08:08PM
+    Psi4 started on: Tuesday, 26 November 2019 04:42PM
 
-    Process ID: 9093
+    Process ID: 11186
     Host:       Mac-mini-3.local
     PSIDATADIR: /Users/aroeira/psi4conda/share/psi4
     Memory:     500.0 MiB
@@ -60,14 +60,14 @@ set {
 
 X = HTCCSD(mol)
 
-X.HTCCSD('full', CC_CONV = 10)
+X.HTCCSD('full', CC_CONV = 10, RELAX_T3T1 = False)
 
 print('CAS energy:   {:<5.10f}'.format(X.Ecas))
 print('CCSD Energy:  {:<5.10f}'.format(energy('ccsd')))
 --------------------------------------------------------------------------
 
 *** tstart() called on Mac-mini-3.local
-*** at Mon Nov 25 20:08:43 2019
+*** at Tue Nov 26 16:42:59 2019
 
    => Loading Basis Set <=
 
@@ -232,18 +232,18 @@ Properties computed using the SCF density matrix
      X:     0.0000      Y:    -0.0000      Z:    -0.0000     Total:     0.0000
 
 
-*** tstop() called on Mac-mini-3.local at Mon Nov 25 20:08:43 2019
+*** tstop() called on Mac-mini-3.local at Tue Nov 26 16:42:59 2019
 Module time:
-	user time   =       0.21 seconds =       0.00 minutes
+	user time   =       0.20 seconds =       0.00 minutes
 	system time =       0.01 seconds =       0.00 minutes
 	total time  =          0 seconds =       0.00 minutes
 Total time:
-	user time   =       0.21 seconds =       0.00 minutes
+	user time   =       0.20 seconds =       0.00 minutes
 	system time =       0.01 seconds =       0.00 minutes
 	total time  =          0 seconds =       0.00 minutes
 
 *** tstart() called on Mac-mini-3.local
-*** at Mon Nov 25 20:08:46 2019
+*** at Tue Nov 26 16:43:02 2019
 
    => Loading Basis Set <=
 
@@ -414,15 +414,15 @@ Properties computed using the SCF density matrix
      X:     0.0000      Y:     0.0000      Z:    -0.0000     Total:     0.0000
 
 
-*** tstop() called on Mac-mini-3.local at Mon Nov 25 20:08:47 2019
+*** tstop() called on Mac-mini-3.local at Tue Nov 26 16:43:02 2019
 Module time:
 	user time   =       0.09 seconds =       0.00 minutes
 	system time =       0.01 seconds =       0.00 minutes
-	total time  =          1 seconds =       0.02 minutes
+	total time  =          0 seconds =       0.00 minutes
 Total time:
-	user time   =       3.07 seconds =       0.05 minutes
-	system time =       0.05 seconds =       0.00 minutes
-	total time  =          4 seconds =       0.07 minutes
+	user time   =       3.02 seconds =       0.05 minutes
+	system time =       0.04 seconds =       0.00 minutes
+	total time  =          3 seconds =       0.05 minutes
  MINTS: Wrapper to libmints.
    by Justin Turney
 
@@ -448,7 +448,7 @@ Total time:
 
 
 *** tstart() called on Mac-mini-3.local
-*** at Mon Nov 25 20:08:47 2019
+*** at Tue Nov 26 16:43:02 2019
 
 
 	Wfn Parameters:
@@ -523,15 +523,15 @@ Total time:
 	Two-electron energy          =      5.80921798604079
 	Reference energy             =     -8.56133168159358
 
-*** tstop() called on Mac-mini-3.local at Mon Nov 25 20:08:47 2019
+*** tstop() called on Mac-mini-3.local at Tue Nov 26 16:43:02 2019
 Module time:
 	user time   =       0.01 seconds =       0.00 minutes
 	system time =       0.05 seconds =       0.00 minutes
 	total time  =          0 seconds =       0.00 minutes
 Total time:
-	user time   =       3.09 seconds =       0.05 minutes
-	system time =       0.11 seconds =       0.00 minutes
-	total time  =          4 seconds =       0.07 minutes
+	user time   =       3.04 seconds =       0.05 minutes
+	system time =       0.10 seconds =       0.00 minutes
+	total time  =          3 seconds =       0.05 minutes
             **************************
             *                        *
             *        CCENERGY        *
@@ -620,7 +620,7 @@ MP2 correlation energy -0.0334362244724656
       * CCSD total energy                     =   -8.606054675789151
 
 
-    Psi4 stopped on: Monday, 25 November 2019 08:08PM
-    Psi4 wall time for execution: 0:00:03.84
+    Psi4 stopped on: Tuesday, 26 November 2019 04:43PM
+    Psi4 wall time for execution: 0:00:03.52
 
 *** Psi4 exiting successfully. Buy a developer a beer!

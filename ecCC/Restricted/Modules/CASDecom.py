@@ -1,6 +1,4 @@
 import numpy as np
-import time
-import copy
 
 ##############################################################################
 ##############################################################################
@@ -10,23 +8,36 @@ import copy
 ##          | |___ / ___ \ ___) | |_| |  __/ (_| (_) | | | | | |            ##
 ##           \____/_/   \_\____/|____/ \___|\___\___/|_| |_| |_|            ##
 ##                                                                          ##
-##     Inputs:  List with CI coefficients (Ccas);                           ##
-##              Corresponding determinants (determinants) as Det            ##
-##              objects from fock module;                                   ##
-##              Reference determinant (ref) as a Det object.                ##                
+##     • Performs Cluster Decomposition of CI coefficients                  ##
+##                                                                          ##
+##     Inputs: ○ List with CI coefficients (Ccas);                          ##
+##             ○ Corresponding determinants (determinants) as Det           ##
+##               objects from fock module;                                  ##
+##             ○ Reference determinant (ref) as a Det object;               ##                
+##             ○ Active Space following CASCI format;                       ##
+##             ○ Keyword for returning T3 (return_t3), true by default.     ## 
+##             ○ Keyword for returning T4 (return_t4), true by default.     ## 
 ##                                                                          ##
 ##     Outputs: Translated amplitudes from CASCI coeffients:                ##
-##          - T1;                                                           ## 
-##          - T2(alpha, beta -> alpha, beta);                               ##
-##          - T3(alpha, beta, alpha -> alpha, beta, alpha);                 ##
-##          - T4(alpha, beta, alpha, alpha -> alpha, beta, alpha, alpha);   ##
-##          - T4(alpha, beta, alpha, beta -> alpha, beta, alpha, beta).     ##
+##          ○ T1;                                                           ## 
+##          ○ T2(alpha, beta -> alpha, beta);                               ##
+##          ○ T3(alpha, beta, alpha -> alpha, beta, alpha);                 ##
+##          ○ T4(alpha, beta, alpha, alpha -> alpha, beta, alpha, alpha);   ##
+##          ○ T4(alpha, beta, alpha, beta -> alpha, beta, alpha, beta).     ##
 ##                                                                          ##
 ##############################################################################
 ##############################################################################
 
-def CASDecom(Ccas, determinants, ref, active_space):
-    t = time.time()
+def CASDecom(Ccas, determinants, ref, active_space, return_t3 = True, return_t4 = True):
+
+    ############### STEP 1 ###############
+    ##########  Initial Workup  ##########
+
+    # If T4 is requested T3 must also be.  
+    if return_t4 and not return_t3:
+        raise NameError('Cannot return T4 without T3, please set return_t3 = True. Could I do that automatically? Yes, but this is pedagogical.')
+
+    print('\n --------- CASDecom STARTED --------- \n')
 
     # Get number of doubly occupied and virtual orbitals from the reference determinant
 
@@ -56,7 +67,9 @@ def CASDecom(Ccas, determinants, ref, active_space):
     T4abab = np.zeros([ndocc, ndocc, ndocc, ndocc, nvir, nvir, nvir, nvir])
 
     # Runs through the determinants to classify them by excitation rank. Collect CI coefficient and excitation indexes.
-    t = time.time()
+
+    ############### STEP 2 ###############
+    ####  CI coefficients collections ####
 
     print('Collecting CI coefficients from CASCI eigenvector')
     for det,ci in zip(determinants, Ccas):
@@ -83,7 +96,7 @@ def CASDecom(Ccas, determinants, ref, active_space):
                 a, b = a[0] - ndocc, b[0] - ndocc
                 T2[i,j,a,b] = ci
 
-        if det - ref == 6:
+        if det - ref == 6 and return_t3:
 
             # For triply excited determinants we want to collect the case ijk -> abc: alpha, beta, alpha -> alpha, beta, alpha
             # By default, CASCI used alpha, alpha, beta -> alpha, alpha, beta where i < j < k and a < b < c. We need to swap two
@@ -104,7 +117,7 @@ def CASDecom(Ccas, determinants, ref, active_space):
                 T3[i,j,k,c,b,a] = -ci
                 T3[k,j,i,c,b,a] =  ci
 
-        if det - ref == 8:
+        if det - ref == 8 and return_t4:
 
             # For quadruply excited determinants we want two spin cases:
             #    - a,b,a,a -> a,b,a,a
@@ -189,11 +202,10 @@ def CASDecom(Ccas, determinants, ref, active_space):
                 T4abab[i,l,k,j,c,d,a,b] = -ci
                 T4abab[i,l,k,j,c,b,a,d] =  ci
 
+    print('Collection completed.\n')
 
-    print('Time for collection: {}'.format(time.time() - t))
-
-    # Create slices of the big T arrays. Most of these arrays are going to be zeros, thus we only need the active part of it 
-    # for the next step. This reduces the cost of using eigsum.
+    # Create slices of the big T arrays. For small active spaces, most of these arrays are going to be zeros. Therefore, we only need 
+    # the active part of it for the next step. This reduces the cost of the following tensor contractions.
 
     active_core = 0
     for x in active_space:
@@ -212,39 +224,39 @@ def CASDecom(Ccas, determinants, ref, active_space):
     h = slice(active_core, ndocc)
     p = slice(0, active_virtual)
 
-    #CAS_T1     = T1[h,p]
-    #CAS_T2     = T2[h,h,p,p]
-    #CAS_T3     = T3[h,h,h,p,p,p]
-    #CAS_T4abaa = T4abaa[h,h,h,h,p,p,p,p]
-    #CAS_T4abab = T4abab[h,h,h,h,p,p,p,p]
+    CAS_T1     = T1[h,p]
+    CAS_T2     = T2[h,h,p,p]
 
-    CAS_T1     = T1
-    CAS_T2     = T2
-    CAS_T3     = T3
-    CAS_T4abaa = T4abaa
-    CAS_T4abab = T4abab
+    if return_t3:
+        CAS_T3     = T3[h,h,h,p,p,p]
+    if return_t4:
+        CAS_T4abaa = T4abaa[h,h,h,h,p,p,p,p]
+        CAS_T4abab = T4abab[h,h,h,h,p,p,p,p]
 
-    # Translate CI coefficients into CC amplitudes
     
-    print('Translating CI coefficients into CC amplitudes...\n')
+    ############### STEP 3 ###############
+    ######  Cluster Decomposition  #######
+
+    print('Cluster Decompositions Started')
     
     # Singles: equivalent to CI
+    print('   -> T1        done.')
     
     # Doubles
-    altCAS_T2 = CAS_T2 - np.einsum('ia,jb-> ijab', CAS_T1, CAS_T1, optimize='optimal')
+    CAS_T2 += - np.einsum('ia,jb-> ijab', CAS_T1, CAS_T1, optimize='optimal')
 
-    #for i in range(ndocc):
-    #    for j in range(ndocc):
-    #        for a in range(nvir):
-    #            for b in range(nvir):
-    #                CAS_T2[i,j,a,b] = CAS_T2[i,j,a,b] - CAS_T1[i,a]*CAS_T1[j,b]
+    print('   -> T2        done.')
 
-    CAS_T2 = altCAS_T2
+    if not return_t3:
+        T1[h,p]                 =   CAS_T1     
+        T2[h,h,p,p]             =   CAS_T2     
+        print('Decomposition completed.')
+        print('\n --------- CASDecom FINISHED ---------\n')
+        return T1, T2
 
-
-    ## Compute the spin case a,a -> a,a from the mixed spin case
+    ## Compute the spin case a,a -> a,a from the mixed spin case: Used for T3 and T4.
     T2aa = CAS_T2 - CAS_T2.transpose(1,0,2,3)
-    
+
     # Triples
     ## Taking advantage of permutation symmetry when possible
 
@@ -259,7 +271,17 @@ def CASDecom(Ccas, determinants, ref, active_space):
               - t1t1                                         \
               + t1t1.transpose(0,1,2,5,4,3)
 
-    ### Compute the spin case a,a,a -> a,a,a from the mixed spin case
+    print('   -> T3        done.')
+
+    if not return_t4:
+        T1[h,p]                 =   CAS_T1     
+        T2[h,h,p,p]             =   CAS_T2     
+        T3[h,h,h,p,p,p]         =   CAS_T3     
+        print('Decomposition completed.')
+        print('\n --------- CASDecom FINISHED ---------\n')
+        return T1, T2, T3
+
+    ### Compute the spin case a,a,a -> a,a,a from the mixed spin case: Used for T4
     CAS_T3aaa = CAS_T3 - CAS_T3.transpose(0,2,1,3,4,5) - CAS_T3.transpose(1,0,2,3,4,5)
 
     # Quadruples
@@ -343,6 +365,8 @@ def CASDecom(Ccas, determinants, ref, active_space):
                   - t1t1t1t1.transpose(0,1,3,2,7,5,6,4) \
                   + t1t1t1t1.transpose(0,1,2,3,7,5,6,4) 
 
+    print('   -> T4 (ABAA) done.')
+
     ## Second case: abab -> abab
     
     ### T1 * T3 terms
@@ -407,6 +431,19 @@ def CASDecom(Ccas, determinants, ref, active_space):
                   + t1t1t1t1.transpose(0,1,2,3,6,5,4,7) \
                   - t1t1t1t1.transpose(0,1,2,3,6,7,4,5) 
 
-    print('CASDecom runtime: {}'.format(time.time() - t))
+    print('   -> T4 (ABAB) done.')
+    print('Decomposition completed.')
+
+    ### These next few lines are just for safety:
+    ### Making sure that the modifications in the slices were traferred properly to the original arrays. Note
+    ### that this will not be the case if 'Sliced_Array += X' is substituted by 'Sliced_Array = Sliced_Array + X'.
+
+    T1[h,p]                 =   CAS_T1     
+    T2[h,h,p,p]             =   CAS_T2     
+    T3[h,h,h,p,p,p]         =   CAS_T3     
+    T4abaa[h,h,h,h,p,p,p,p] =   CAS_T4abaa 
+    T4abab[h,h,h,h,p,p,p,p] =   CAS_T4abab 
+
+    print('\n --------- CASDecom FINISHED ---------\n')
 
     return T1, T2, T3, T4abab, T4abaa
