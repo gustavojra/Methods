@@ -237,7 +237,7 @@ def CASDecom(Ccas, determinants, ref, active_space, return_t3 = True, return_t4 
     ############### STEP 3 ###############
     ######  Cluster Decomposition  #######
 
-    print('Cluster Decompositions Started')
+    print('Cluster Decomposition Started')
     
     # Singles: equivalent to CI
     print('   -> T1        done.')
@@ -260,15 +260,15 @@ def CASDecom(Ccas, determinants, ref, active_space, return_t3 = True, return_t4 
     # Triples
     ## Taking advantage of permutation symmetry when possible
 
-    t1t2 = np.einsum('ia, jkbc -> ijkabc', CAS_T1, CAS_T2)
-    t1t1 = np.einsum('ia,jb,kc -> ijkabc', CAS_T1, CAS_T1, CAS_T1)
+    t1t2 = np.einsum('ia, jkbc -> ijkabc', CAS_T1, CAS_T2, optimize='optimal')
+    t1t1 = np.einsum('ia,jb,kc -> ijkabc', CAS_T1, CAS_T1, CAS_T1, optimize='optimal')
 
-    CAS_T3 += - t1t2                                         \
-              + t1t2.transpose(0,1,2,5,4,3)                  \
-              + t1t2.transpose(2,1,0,3,4,5)                  \
-              - t1t2.transpose(2,1,0,5,4,3)                  \
-              - np.einsum('jb,ikac -> ijkabc', CAS_T1, T2aa) \
-              - t1t1                                         \
+    CAS_T3 += - t1t2                                                             \
+              + t1t2.transpose(0,1,2,5,4,3)                                      \
+              + t1t2.transpose(2,1,0,3,4,5)                                      \
+              - t1t2.transpose(2,1,0,5,4,3)                                      \
+              - np.einsum('jb,ikac -> ijkabc', CAS_T1, T2aa, optimize='optimal') \
+              - t1t1                                                             \
               + t1t1.transpose(0,1,2,5,4,3)
 
     print('   -> T3        done.')
@@ -290,24 +290,24 @@ def CASDecom(Ccas, determinants, ref, active_space, return_t3 = True, return_t4 
 
     ### T1 * T3 terms
     
-    t1t3a = np.einsum('ia,kjlcbd -> ijklabcd', CAS_T1, CAS_T3) 
-    t1t3b = np.einsum('kd,ijlabc -> ijklabcd', CAS_T1, CAS_T3) 
+    t1t3a = np.einsum('ia,kjlcbd -> ijklabcd', CAS_T1, CAS_T3, optimize='optimal') 
+    t1t3b = np.einsum('kd,ijlabc -> ijklabcd', CAS_T1, CAS_T3, optimize='optimal') 
 
-    CAS_T4abaa += - t1t3a                                                  \
-                  + t1t3a.transpose(0,1,2,3,6,5,4,7)                       \
-                  - t1t3a.transpose(0,1,3,2,7,5,6,4)                       \
-                  - np.einsum('jb, iklacd -> ijklabcd', CAS_T1, CAS_T3aaa) \
-                  + t1t3a.transpose(2,1,0,3,4,5,6,7)                       \
-                  - t1t3a.transpose(2,1,0,3,6,5,4,7)                       \
-                  + t1t3b                                                  \
-                  - t1t3a.transpose(3,1,2,0,4,5,7,6)                       \
-                  + t1t3b.transpose(0,1,3,2,4,5,7,6)                       \
+    CAS_T4abaa += - t1t3a                                                                      \
+                  + t1t3a.transpose(0,1,2,3,6,5,4,7)                                           \
+                  - t1t3a.transpose(0,1,3,2,7,5,6,4)                                           \
+                  - np.einsum('jb, iklacd -> ijklabcd', CAS_T1, CAS_T3aaa, optimize='optimal') \
+                  + t1t3a.transpose(2,1,0,3,4,5,6,7)                                           \
+                  - t1t3a.transpose(2,1,0,3,6,5,4,7)                                           \
+                  + t1t3b                                                                      \
+                  - t1t3a.transpose(3,1,2,0,4,5,7,6)                                           \
+                  + t1t3b.transpose(0,1,3,2,4,5,7,6)                                           \
                   - t1t3b.transpose(0,1,3,2,4,5,6,7)
     
     ### T2 * T2 terms
     
-    t2t2a = np.einsum('ijab, klcd -> ijklabcd', CAS_T2, T2aa)
-    t2t2b = np.einsum('ljcb, kida -> ijklabcd', CAS_T2, T2aa)
+    t2t2a = np.einsum('ijab, klcd -> ijklabcd', CAS_T2, T2aa, optimize='optimal')
+    t2t2b = np.einsum('ljcb, kida -> ijklabcd', CAS_T2, T2aa, optimize='optimal')
 
     CAS_T4abaa += - t2t2a                            \
                   + t2t2a.transpose(0,1,2,3,6,5,4,7) \
@@ -321,10 +321,10 @@ def CASDecom(Ccas, determinants, ref, active_space, return_t3 = True, return_t4 
 
     ### T1 * T1 * T2 terms
     
-    t1t1t2a = np.einsum('ia, jb, klcd -> ijklabcd', CAS_T1, CAS_T1, T2aa)
-    t1t1t2b = np.einsum('kd, jb, ilac -> ijklabcd', CAS_T1, CAS_T1, T2aa)
-    t1t1t2c = np.einsum('ia, kc, ljdb -> ijklabcd', CAS_T1, CAS_T1, CAS_T2)
-    t1t1t2d = np.einsum('ic, ld, kjab -> ijklabcd', CAS_T1, CAS_T1, CAS_T2)
+    t1t1t2a = np.einsum('ia, jb, klcd -> ijklabcd', CAS_T1, CAS_T1, T2aa, optimize='optimal')
+    t1t1t2b = np.einsum('kd, jb, ilac -> ijklabcd', CAS_T1, CAS_T1, T2aa, optimize='optimal')
+    t1t1t2c = np.einsum('ia, kc, ljdb -> ijklabcd', CAS_T1, CAS_T1, CAS_T2, optimize='optimal')
+    t1t1t2d = np.einsum('ic, ld, kjab -> ijklabcd', CAS_T1, CAS_T1, CAS_T2, optimize='optimal')
 
     CAS_T4abaa += - t1t1t2a                            \
                   + t1t1t2a.transpose(0,1,2,3,6,5,4,7) \
@@ -352,11 +352,11 @@ def CASDecom(Ccas, determinants, ref, active_space, return_t3 = True, return_t4 
                   + t1t1t2c.transpose(3,1,2,0,4,5,6,7) \
                   - t1t1t2d.transpose(2,1,0,3,4,5,6,7) \
                   - t1t1t2c.transpose(3,1,2,0,4,5,7,6) \
-                  + t1t1t2d.transpose(2,1,0,3,4,5,7,6) \
+                  + t1t1t2d.transpose(2,1,0,3,4,5,7,6) 
 
     ### T1 * T1 * T1 * T1 terms
 
-    t1t1t1t1 = np.einsum('ia, jb, kc, ld -> ijklabcd', CAS_T1,CAS_T1,CAS_T1,CAS_T1) 
+    t1t1t1t1 = np.einsum('ia, jb, kc, ld -> ijklabcd', CAS_T1,CAS_T1,CAS_T1,CAS_T1, optimize='optimal') 
 
     CAS_T4abaa += - t1t1t1t1                            \
                   + t1t1t1t1.transpose(0,1,2,3,4,5,7,6) \
@@ -371,8 +371,8 @@ def CASDecom(Ccas, determinants, ref, active_space, return_t3 = True, return_t4 
     
     ### T1 * T3 terms
     
-    t1t3a = np.einsum('ia, jklbcd -> ijklabcd', CAS_T1, CAS_T3)
-    t1t3b = np.einsum('jd, ilkabc -> ijklabcd', CAS_T1, CAS_T3)
+    t1t3a = np.einsum('ia, jklbcd -> ijklabcd', CAS_T1, CAS_T3, optimize='optimal')
+    t1t3b = np.einsum('jd, ilkabc -> ijklabcd', CAS_T1, CAS_T3, optimize='optimal')
     CAS_T4abab += - t1t3a                               \
                   + t1t3a.transpose(0,1,2,3,6,5,4,7)    \
                   - t1t3a.transpose(1,0,3,2,5,4,7,6)    \
@@ -384,47 +384,47 @@ def CASDecom(Ccas, determinants, ref, active_space, return_t3 = True, return_t4 
     
     ### T2 * T2 terms
 
-    t2t2 = np.einsum('ijab, klcd -> ijklabcd', CAS_T2, CAS_T2)
+    t2t2 = np.einsum('ijab, klcd -> ijklabcd', CAS_T2, CAS_T2, optimize='optimal')
 
-    CAS_T4abab += - t2t2                                                \
-                  + t2t2.transpose(0,1,2,3,4,7,6,5)                     \
-                  + t2t2.transpose(0,1,2,3,6,5,4,7)                     \
-                  - t2t2.transpose(0,1,2,3,6,7,4,5)                     \
-                  + t2t2.transpose(0,3,2,1,4,5,6,7)                     \
-                  - t2t2.transpose(0,3,2,1,6,5,4,7)                     \
-                  + t2t2.transpose(0,3,2,1,6,7,4,5)                     \
-                  - np.einsum('ilad, jkbc -> ijklabcd', CAS_T2, CAS_T2) \
-                  - np.einsum('ikac, jlbd -> ijklabcd', T2aa, T2aa) 
+    CAS_T4abab += - t2t2                                                                    \
+                  + t2t2.transpose(0,1,2,3,4,7,6,5)                                         \
+                  + t2t2.transpose(0,1,2,3,6,5,4,7)                                         \
+                  - t2t2.transpose(0,1,2,3,6,7,4,5)                                         \
+                  + t2t2.transpose(0,3,2,1,4,5,6,7)                                         \
+                  - t2t2.transpose(0,3,2,1,6,5,4,7)                                         \
+                  + t2t2.transpose(0,3,2,1,6,7,4,5)                                         \
+                  - np.einsum('ilad, jkbc -> ijklabcd', CAS_T2, CAS_T2, optimize='optimal') \
+                  - np.einsum('ikac, jlbd -> ijklabcd', T2aa, T2aa, optimize='optimal') 
     
     ### T1 * T1 * T2 terms
 
-    t1t1t2a = np.einsum('ia,jb,klcd -> ijklabcd', CAS_T1, CAS_T1, CAS_T2) 
-    t1t1t2b = np.einsum('jb,ka,ilcd -> ijklabcd', CAS_T1, CAS_T1, CAS_T2)
+    t1t1t2a = np.einsum('ia,jb,klcd -> ijklabcd', CAS_T1, CAS_T1, CAS_T2, optimize='optimal') 
+    t1t1t2b = np.einsum('jb,ka,ilcd -> ijklabcd', CAS_T1, CAS_T1, CAS_T2, optimize='optimal')
 
-    CAS_T4abab += - t1t1t2a                                                     \
-                  + t1t1t2a.transpose(0,1,2,3,4,7,6,5)                          \
-                  + t1t1t2a.transpose(0,3,2,1,4,5,6,7)                          \
-                  + t1t1t2a.transpose(0,1,2,3,6,5,4,7)                          \
-                  - t1t1t2a.transpose(0,1,2,3,6,7,4,5)                          \
-                  - t1t1t2a.transpose(0,3,2,1,6,5,4,7)                          \
-                  + t1t1t2a.transpose(0,3,2,1,6,7,4,5)                          \
-                  - t1t1t2a.transpose(2,3,0,1,4,5,6,7)                          \
-                  + t1t1t2a.transpose(2,3,0,1,4,7,6,5)                          \
-                  + t1t1t2a.transpose(2,3,0,1,6,5,4,7)                          \
-                  - t1t1t2a.transpose(2,3,0,1,6,7,4,5)                          \
-                  + t1t1t2b                                                     \
-                  - t1t1t2b.transpose(0,1,2,3,6,5,4,7)                          \
-                  - t1t1t2b.transpose(0,1,2,3,4,7,6,5)                          \
-                  + t1t1t2b.transpose(0,1,2,3,6,7,4,5)                          \
-                  - t1t1t2b.transpose(2,3,0,1,4,7,6,5)                          \
-                  - np.einsum('ia,kc,jlbd -> ijklabcd', CAS_T1, CAS_T1, T2aa)   \
-                  + np.einsum('ic,ka,jlbd -> ijklabcd', CAS_T1, CAS_T1, T2aa)   \
-                  - np.einsum('jb,ld,ikac -> ijklabcd', CAS_T1, CAS_T1, T2aa)   \
-                  + np.einsum('jd,lb,ikac -> ijklabcd', CAS_T1, CAS_T1, T2aa)   
+    CAS_T4abab += - t1t1t2a                                                                         \
+                  + t1t1t2a.transpose(0,1,2,3,4,7,6,5)                                              \
+                  + t1t1t2a.transpose(0,3,2,1,4,5,6,7)                                              \
+                  + t1t1t2a.transpose(0,1,2,3,6,5,4,7)                                              \
+                  - t1t1t2a.transpose(0,1,2,3,6,7,4,5)                                              \
+                  - t1t1t2a.transpose(0,3,2,1,6,5,4,7)                                              \
+                  + t1t1t2a.transpose(0,3,2,1,6,7,4,5)                                              \
+                  - t1t1t2a.transpose(2,3,0,1,4,5,6,7)                                              \
+                  + t1t1t2a.transpose(2,3,0,1,4,7,6,5)                                              \
+                  + t1t1t2a.transpose(2,3,0,1,6,5,4,7)                                              \
+                  - t1t1t2a.transpose(2,3,0,1,6,7,4,5)                                              \
+                  + t1t1t2b                                                                         \
+                  - t1t1t2b.transpose(0,1,2,3,6,5,4,7)                                              \
+                  - t1t1t2b.transpose(0,1,2,3,4,7,6,5)                                              \
+                  + t1t1t2b.transpose(0,1,2,3,6,7,4,5)                                              \
+                  - t1t1t2b.transpose(2,3,0,1,4,7,6,5)                                              \
+                  - np.einsum('ia,kc,jlbd -> ijklabcd', CAS_T1, CAS_T1, T2aa, optimize='optimal')   \
+                  + np.einsum('ic,ka,jlbd -> ijklabcd', CAS_T1, CAS_T1, T2aa, optimize='optimal')   \
+                  - np.einsum('jb,ld,ikac -> ijklabcd', CAS_T1, CAS_T1, T2aa, optimize='optimal')   \
+                  + np.einsum('jd,lb,ikac -> ijklabcd', CAS_T1, CAS_T1, T2aa, optimize='optimal')   
 
     ### T1 * T1 * T1 * T1 terms
     
-    t1t1t1t1 = np.einsum('ia,jb,kc,ld -> ijklabcd', CAS_T1, CAS_T1, CAS_T1, CAS_T1)
+    t1t1t1t1 = np.einsum('ia,jb,kc,ld -> ijklabcd', CAS_T1, CAS_T1, CAS_T1, CAS_T1, optimize='optimal')
 
     CAS_T4abab += - t1t1t1t1                            \
                   + t1t1t1t1.transpose(0,1,2,3,4,7,6,5) \

@@ -4,9 +4,17 @@ import numpy as np
 import time
 import sys
 
+def mask4(M, m1, m2, m3, m4):
+    return M[m1,:,:,:][:,m2,:,:][:,:,m3,:][:,:,:,m4]
+
 def H_dif0(det1, molint1, molint2):
+    # mask
     alphas = det1.alpha_list()
     betas = det1.beta_list()
+
+    hcore = np.einsum('mm,m->', molint1, alphas) + np.einsum('mm,m->', molint1, betas)
+
+    t0 = time.time()
     # Compute J for all combinations of m n being alpha or beta
     JK  = np.einsum('mmnn, m, n', molint2, alphas, alphas, optimize = 'optimal')\
         + np.einsum('mmnn, m, n', molint2, betas, betas, optimize = 'optimal')  \
@@ -15,7 +23,23 @@ def H_dif0(det1, molint1, molint2):
     # For K m and n have to have the same spin, thus only two cases are considered
     JK -= np.einsum('mnnm, m, n', molint2, alphas, alphas, optimize = 'optimal')
     JK -= np.einsum('mnnm, m, n', molint2, betas, betas, optimize = 'optimal')
-    return 0.5 * JK + np.einsum('mm,m->', molint1, alphas) + np.einsum('mm,m->', molint1, betas)
+    reft = time.time()-t0
+    print('Conventional: {}  Time: {}  Relative Time: {}'.format(JK, reft, 1.0))
+
+    t0 = time.time()
+    a = np.array(alphas) == 1
+    b = np.array(betas) == 1
+    # Compute J for all combinations of m n being alpha or beta
+    JK2  = np.einsum('mmnn ->', mask4(molint2,a,a,a,a), optimize = 'optimal')\
+         + np.einsum('mmnn ->', mask4(molint2,b,b,b,b), optimize = 'optimal')  \
+         + np.einsum('mmnn ->', mask4(molint2,a,a,b,b), optimize = 'optimal') \
+         + np.einsum('mmnn ->', mask4(molint2,b,b,a,a), optimize = 'optimal')
+    # For K m and n have to have the same spin, thus only two cases are considered
+    JK2 -= np.einsum('mnnm ->', mask4(molint2,a,a,a,a), optimize = 'optimal')
+    JK2 -= np.einsum('mnnm ->', mask4(molint2,b,b,b,b), optimize = 'optimal')
+    t2 = time.time() - t0
+    print('Mask:         {}  Time: {}  Relative Time: {}'.format(JK2, t2,(t2)/reft))
+    return 0.5 * JK + hcore
     
     
 def H_dif4(det1, det2, molint1, molint2):
@@ -66,8 +90,10 @@ def get_H(dets, molint1, molint2, v = False, t = False):
         H = np.zeros((l,l))
         t0 = time.time()
         file = sys.stdout
+        td = time.time()
         for i,d1 in enumerate(dets):
             H[i,i] = H_dif0(d1, molint1, molint2)
+        for i,d1 in enumerate(dets):
             for j,d2 in enumerate(dets):
                 if j >= i:
                     break
@@ -85,6 +111,16 @@ def get_H(dets, molint1, molint2, v = False, t = False):
             print("Completed. Time needed: {}".format(time.time() - t0))
         return H
 
+def H_diag(a_mask, b_mask, OEI, TEI):
+    Anti = TEI - TEI.swapaxes(1,2)
+    m = a_mask == b_mask
+    m2 = a_mask != b_mask
+    out = 2*np.einsum('mm ->', OEI[m,:][:,m]) + np.einsum('mm ->', OEI[m2,:][:,m2])
+    out += 0.5*np.einsum('mmnn ->', Anti[m,:,:,:][:,m,:,:][:,:,m,:][:,:,:,m])
+    out += np.einsum('mmnn ->', Anti[m2,:,:,:][:,m2,:,:][:,:,m,:][:,:,:,m])
+    out += np.einsum('mmnn ->', Anti[m2,:,:,:][:,m2,:,:][:,:,m2,:][:,:,:,m2])
+    return out
+    
 def Hgen(inp):
     det1 = inp[0]
     det2 = inp[1]
