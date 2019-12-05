@@ -1,8 +1,4 @@
-import os
-import sys
-import numpy as np
-sys.path.append('./')
-from HTCCSD import HTCCSD
+from CASCCSD import CASCCSD
 
 molecule mol {
     0 1
@@ -23,9 +19,9 @@ set {
     R_CONVERGENCE 10
 }
 
-X = HTCCSD(mol)
+X = CASCCSD(mol)
 
-X.HTCCSD('full', CC_CONV=12, MP2_GUESS=False, RELAX_T3T1=False)
+X.compute('full', CC_CONV=12, MP2_GUESS=False, RELAX_T3T1=False)
 
 print('CAS energy:   {:<5.10f}'.format(X.Ecas))
 print('CCSD Energy:  {:<5.10f}'.format(energy('ccsd')))

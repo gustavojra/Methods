@@ -103,8 +103,9 @@ def CCSD_Iter(T1, T2, EINSUMOPT='optimal'):
 
 water = psi4.geometry("""
     0 1
-    He 
-    He 1 2.0
+    O
+    H 1 0.96
+    H 1 0.96 2 104.5
     symmetry c1
 """)
 
@@ -132,7 +133,7 @@ water = psi4.geometry("""
 
 # Basis set
 
-basis = 'cc-pvdz'
+basis = 'cc-pvqz'
 
 # Psi4 Options
 
@@ -147,11 +148,11 @@ psi4.set_options({'basis': basis,
 print('---------------- RUNNING PSI4 ------------------')
 tinit = time.time()
 scf_e, wfn = psi4.energy('scf', return_wfn=True)
-p4_mp2 = psi4.energy('mp2')
+#p4_mp2 = psi4.energy('mp2')
 p4_ccsd = psi4.energy('ccsd')
 
 print('SCF  Energy from Psi4: {:<5.10f}'.format(scf_e))
-print('MP2  Energy from Psi4: {:<5.10f}'.format(p4_mp2))
+#print('MP2  Energy from Psi4: {:<5.10f}'.format(p4_mp2))
 print('CCSD Energy from Psi4: {:<5.10f}'.format(p4_ccsd))
 print('------------------------------------------------')
 print('Psi4 computations completed in {:.5f} seconds\n'.format(time.time() - tinit))
@@ -216,7 +217,7 @@ print('MP2 Energy: {:<5.10f}     Time required: {:.5f}'.format(E+scf_e, time.tim
 
 r1 = 0
 r2 = 1
-CC_CONV = 6
+CC_CONV = 7
 CC_MAXITER = 30
     
 LIM = 10**(-CC_CONV)
@@ -245,7 +246,7 @@ while r2 > LIM or r1 > LIM:
 
 print("\nCC Equations Converged!!!")
 print("Final CCSD Energy:     {:<5.10f}".format(E + scf_e))
-print('CCSD Energy from Psi4: {:<5.10f}'.format(p4_ccsd))
+#print('CCSD Energy from Psi4: {:<5.10f}'.format(p4_ccsd))
 print("Total Computation time:        {}".format(time.time() - tinit))
 
 

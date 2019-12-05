@@ -18,7 +18,7 @@ from ampcomp import tcompare
 from CASCI import CASCI
 from CASDecom import CASDecom
 
-class HTCCSD:
+class CASCCSD:
 
     def __init__(self, mol):
 
@@ -187,7 +187,7 @@ class HTCCSD:
         # Apply permutation
         self.T3onT2sec += np.einsum('ijab -> jiba', self.T3onT2sec)
 
-    def HTCCSD(self, active_space='', CC_CONV=6, CC_MAXITER=50, E_CONV = 8, MP2_GUESS=False, RELAX_T3T1=True):
+    def compute(self, active_space='', CC_CONV=6, CC_MAXITER=50, E_CONV = 8, MP2_GUESS=False, RELAX_T3T1=True):
 
         # This is the main function in this code. After initializing the class object you need to call this
         # function to compute TCC energies. Thus, your Psi4 input needs to contain:
@@ -305,6 +305,7 @@ class HTCCSD:
         print('\n Starting CCSD Iterations')
         print('='*36)
 
+        tcc = time.time()
         while self.r2 > LIM or self.r1 > LIM or abs(dE) > ELIM:
             ite += 1
             if ite > CC_MAXITER:
@@ -321,8 +322,8 @@ class HTCCSD:
             print("T2 Residue:            {:>13.2E}".format(self.r2))
             print("Time required (s):     {:< 5.10f}".format(time.time() - t))
             print('='*36)
-        
+        tcc = time.time() - tcc 
         self.Ecc = self.Ecc + self.Escf
-
         print("\nCC Equations Converged!!!")
+        print("Time required: {}".format(tcc))
         print("Final TCCSD Energy:     {:<5.10f}".format(self.Ecc))

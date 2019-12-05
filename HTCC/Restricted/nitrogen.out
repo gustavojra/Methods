@@ -23,22 +23,19 @@
     -----------------------------------------------------------------------
 
 
-    Psi4 started on: Sunday, 01 December 2019 11:36PM
+    Psi4 started on: Tuesday, 03 December 2019 06:44PM
 
-    Process ID: 8239
-    Host:       BabyShark
-    PSIDATADIR: /home/aroeira/psi4conda/share/psi4
+    Process ID: 19889
+    Host:       Mac-mini-3.local
+    PSIDATADIR: /Users/aroeira/psi4conda/share/psi4
     Memory:     500.0 MiB
     Threads:    1
     
   ==> Input File <==
 
 --------------------------------------------------------------------------
-import os
-import sys
-import numpy as np
-sys.path.append('./')
-from HTCCSD import HTCCSD
+import time
+from CASCCSD import CASCCSD
 
 molecule mol {
     unit bohr
@@ -53,29 +50,30 @@ set {
     REFERENCE     RHF
     SCF_TYPE      PK
     SOSCF         True
-    E_CONVERGENCE 8
+    E_CONVERGENCE 12
     MAXITER       100
     MAX_ATTEMPTS  10
     GUESS         READ
 }
 
-X = HTCCSD(mol)
+N2 = CASCCSD(mol)
 
-X.HTCCSD([4,5,6,7,8,9], CC_CONV=8)
+N2.compute('none', MP2_GUESS=True, E_CONV=12)
 
-print('CAS energy:   {:<5.10f}'.format(X.Ecas))
-print('CCSD Energy: {:<5.10f}'.format(energy('ccsd')))
+tpsi4 = time.time()
+print('CCSD Energy:  {:<5.10f}'.format(energy('ccsd')))
+print(time.time()-tpsi4)
 --------------------------------------------------------------------------
 
-*** tstart() called on BabyShark
-*** at Sun Dec  1 23:36:48 2019
+*** tstart() called on Mac-mini-3.local
+*** at Tue Dec  3 18:44:51 2019
 
    => Loading Basis Set <=
 
     Name: CC-PVDZ
     Role: ORBITAL
     Keyword: BASIS
-    atoms 1-2 entry N          line   168 file /home/aroeira/psi4conda/share/psi4/basis/cc-pvdz.gbs 
+    atoms 1-2 entry N          line   168 file /Users/aroeira/psi4conda/share/psi4/basis/cc-pvdz.gbs 
 
 
          ---------------------------------------------------------
@@ -117,7 +115,7 @@ print('CCSD Energy: {:<5.10f}'.format(energy('ccsd')))
   MOM disabled.
   Fractional occupation disabled.
   Guess Type is READ.
-  Energy threshold   = 1.00e-08
+  Energy threshold   = 1.00e-12
   Density threshold  = 1.00e-06
   Integral threshold = 0.00e+00
 
@@ -181,10 +179,11 @@ print('CCSD Energy: {:<5.10f}'.format(energy('ccsd')))
 
    @RHF iter SAD:  -108.08000487095929   -1.08080e+02   0.00000e+00 
    @RHF iter   1:  -108.94874024975297   -8.68735e-01   3.66358e-03 DIIS
-   @RHF iter   2:  -108.95391274418905   -5.17249e-03   6.61155e-04 DIIS
-   @RHF iter   3:  -108.95413606612978   -2.23322e-04   1.69209e-04 SOSCF, nmicro=4
-   @RHF iter   4:  -108.95415346685894   -1.74007e-05   3.38103e-07 SOSCF, nmicro=5
-   @RHF iter   5:  -108.95415346689592   -3.69766e-11   2.02538e-10 SOSCF, nmicro=conv
+   @RHF iter   2:  -108.95391274418944   -5.17249e-03   6.61155e-04 DIIS
+   @RHF iter   3:  -108.95413606613012   -2.23322e-04   1.69209e-04 SOSCF, nmicro=4
+   @RHF iter   4:  -108.95415346685925   -1.74007e-05   3.38103e-07 SOSCF, nmicro=5
+   @RHF iter   5:  -108.95415346689623   -3.69766e-11   2.02536e-10 SOSCF, nmicro=3
+   @RHF iter   6:  -108.95415346689629   -5.68434e-14   3.75681e-12 SOSCF, nmicro=conv
   Energy and wave function converged.
 
 
@@ -213,14 +212,14 @@ print('CCSD Energy: {:<5.10f}'.format(energy('ccsd')))
               A 
     DOCC [     7 ]
 
-  @RHF Final Energy:  -108.95415346689592
+  @RHF Final Energy:  -108.95415346689629
 
    => Energetics <=
 
     Nuclear Repulsion Energy =             23.6258437801350070
-    One-Electron Energy =                -194.2451325030548333
-    Two-Electron Energy =                  61.6651352560239161
-    Total Energy =                       -108.9541534668959173
+    One-Electron Energy =                -194.2451325031215106
+    Two-Electron Energy =                  61.6651352560902239
+    Total Energy =                       -108.9541534668962868
 
 Computation Completed
 
@@ -233,34 +232,34 @@ Properties computed using the SCF density matrix
      X:     0.0000      Y:     0.0000      Z:     0.0000
 
   Electronic Dipole Moment: [e a0]
-     X:    -0.0000      Y:     0.0000      Z:     0.0000
+     X:    -0.0000      Y:    -0.0000      Z:    -0.0000
 
   Dipole Moment: [e a0]
-     X:    -0.0000      Y:     0.0000      Z:     0.0000     Total:     0.0000
+     X:    -0.0000      Y:    -0.0000      Z:    -0.0000     Total:     0.0000
 
   Dipole Moment: [D]
-     X:    -0.0000      Y:     0.0000      Z:     0.0000     Total:     0.0000
+     X:    -0.0000      Y:    -0.0000      Z:    -0.0000     Total:     0.0000
 
 
-*** tstop() called on BabyShark at Sun Dec  1 23:36:48 2019
+*** tstop() called on Mac-mini-3.local at Tue Dec  3 18:44:51 2019
 Module time:
-	user time   =       0.44 seconds =       0.01 minutes
-	system time =       0.01 seconds =       0.00 minutes
+	user time   =       0.30 seconds =       0.01 minutes
+	system time =       0.02 seconds =       0.00 minutes
 	total time  =          0 seconds =       0.00 minutes
 Total time:
-	user time   =       0.44 seconds =       0.01 minutes
-	system time =       0.01 seconds =       0.00 minutes
+	user time   =       0.30 seconds =       0.01 minutes
+	system time =       0.02 seconds =       0.00 minutes
 	total time  =          0 seconds =       0.00 minutes
 
-*** tstart() called on BabyShark
-*** at Sun Dec  1 23:37:05 2019
+*** tstart() called on Mac-mini-3.local
+*** at Tue Dec  3 18:45:07 2019
 
    => Loading Basis Set <=
 
     Name: CC-PVDZ
     Role: ORBITAL
     Keyword: BASIS
-    atoms 1-2 entry N          line   168 file /home/aroeira/psi4conda/share/psi4/basis/cc-pvdz.gbs 
+    atoms 1-2 entry N          line   168 file /Users/aroeira/psi4conda/share/psi4/basis/cc-pvdz.gbs 
 
 
          ---------------------------------------------------------
@@ -302,7 +301,7 @@ Total time:
   MOM disabled.
   Fractional occupation disabled.
   Guess Type is READ.
-  Energy threshold   = 1.00e-08
+  Energy threshold   = 1.00e-12
   Density threshold  = 1.00e-08
   Integral threshold = 0.00e+00
 
@@ -321,7 +320,7 @@ Total time:
     Name: CC-PVDZ
     Role: ORBITAL
     Keyword: BASIS
-    atoms 1-2 entry N          line   168 file /home/aroeira/psi4conda/share/psi4/basis/cc-pvdz.gbs 
+    atoms 1-2 entry N          line   168 file /Users/aroeira/psi4conda/share/psi4/basis/cc-pvdz.gbs 
 
   Reading orbitals from file 180, no projection.
 
@@ -372,8 +371,8 @@ Total time:
 
                         Total Energy        Delta E     RMS |[F,P]|
 
-   @RHF iter   0:  -108.95415346689596   -1.08954e+02   2.67723e-11 
-   @RHF iter   1:  -108.95415346689617   -2.13163e-13   6.97741e-12 DIIS
+   @RHF iter   0:  -108.95415346689637   -1.08954e+02   7.82806e-13 
+   @RHF iter   1:  -108.95415346689632    5.68434e-14   1.95571e-13 DIIS
   Energy and wave function converged.
 
 
@@ -402,14 +401,14 @@ Total time:
               A 
     DOCC [     7 ]
 
-  @RHF Final Energy:  -108.95415346689617
+  @RHF Final Energy:  -108.95415346689632
 
    => Energetics <=
 
     Nuclear Repulsion Energy =             23.6258437801350070
-    One-Electron Energy =                -194.2451325035189598
-    Two-Electron Energy =                  61.6651352564877868
-    Total Energy =                       -108.9541534668961731
+    One-Electron Energy =                -194.2451325035271736
+    Two-Electron Energy =                  61.6651352564958586
+    Total Energy =                       -108.9541534668963152
 
 Computation Completed
 
@@ -422,24 +421,24 @@ Properties computed using the SCF density matrix
      X:     0.0000      Y:     0.0000      Z:     0.0000
 
   Electronic Dipole Moment: [e a0]
-     X:    -0.0000      Y:     0.0000      Z:     0.0000
+     X:    -0.0000      Y:     0.0000      Z:    -0.0000
 
   Dipole Moment: [e a0]
-     X:    -0.0000      Y:     0.0000      Z:     0.0000     Total:     0.0000
+     X:    -0.0000      Y:     0.0000      Z:    -0.0000     Total:     0.0000
 
   Dipole Moment: [D]
-     X:    -0.0000      Y:     0.0000      Z:     0.0000     Total:     0.0000
+     X:    -0.0000      Y:     0.0000      Z:    -0.0000     Total:     0.0000
 
 
-*** tstop() called on BabyShark at Sun Dec  1 23:37:05 2019
+*** tstop() called on Mac-mini-3.local at Tue Dec  3 18:45:07 2019
 Module time:
-	user time   =       0.25 seconds =       0.00 minutes
-	system time =       0.00 seconds =       0.00 minutes
+	user time   =       0.17 seconds =       0.00 minutes
+	system time =       0.02 seconds =       0.00 minutes
 	total time  =          0 seconds =       0.00 minutes
 Total time:
-	user time   =      16.30 seconds =       0.27 minutes
-	system time =       0.71 seconds =       0.01 minutes
-	total time  =         17 seconds =       0.28 minutes
+	user time   =      12.14 seconds =       0.20 minutes
+	system time =       2.31 seconds =       0.04 minutes
+	total time  =         16 seconds =       0.27 minutes
  MINTS: Wrapper to libmints.
    by Justin Turney
 
@@ -460,12 +459,12 @@ Total time:
          stored in file 35.
 
       Computing two-electron integrals...done
-      Computed 21245 non-zero two-electron integrals.
+      Computed 19381 non-zero two-electron integrals.
         Stored in file 33.
 
 
-*** tstart() called on BabyShark
-*** at Sun Dec  1 23:37:05 2019
+*** tstart() called on Mac-mini-3.local
+*** at Tue Dec  3 18:45:07 2019
 
 
 	Wfn Parameters:
@@ -535,20 +534,20 @@ Total time:
 	Total:                                     0.022 (MW) /      0.173 (MB)
 
 	Nuclear Rep. energy          =     23.62584378013501
-	SCF energy                   =   -108.95415346689617
-	One-electron energy          =   -194.24513250355304
-	Two-electron energy          =     61.66513525652201
-	Reference energy             =   -108.95415346689603
+	SCF energy                   =   -108.95415346689632
+	One-electron energy          =   -194.24513250355119
+	Two-electron energy          =     61.66513525651992
+	Reference energy             =   -108.95415346689626
 
-*** tstop() called on BabyShark at Sun Dec  1 23:37:05 2019
+*** tstop() called on Mac-mini-3.local at Tue Dec  3 18:45:07 2019
 Module time:
-	user time   =       0.04 seconds =       0.00 minutes
-	system time =       0.04 seconds =       0.00 minutes
+	user time   =       0.03 seconds =       0.00 minutes
+	system time =       0.09 seconds =       0.00 minutes
 	total time  =          0 seconds =       0.00 minutes
 Total time:
-	user time   =      16.40 seconds =       0.27 minutes
-	system time =       0.75 seconds =       0.01 minutes
-	total time  =         17 seconds =       0.28 minutes
+	user time   =      12.22 seconds =       0.20 minutes
+	system time =       2.41 seconds =       0.04 minutes
+	total time  =         16 seconds =       0.27 minutes
             **************************
             *                        *
             *        CCENERGY        *
@@ -556,8 +555,8 @@ Total time:
             **************************
 
     Nuclear Rep. energy (wfn)     =   23.625843780135007
-    SCF energy          (wfn)     = -108.954153466896173
-    Reference energy    (file100) = -108.954153466896031
+    SCF energy          (wfn)     = -108.954153466896315
+    Reference energy    (file100) = -108.954153466896258
 
     Input parameters:
     -----------------
@@ -567,7 +566,7 @@ Total time:
     Memory (Mbytes) =     524.3
     Maxiter         =    100
     R_Convergence   =     1.0e-07
-    E_Convergence   =     1.0e-08
+    E_Convergence   =     1.0e-12
     Restart         =     Yes
     DIIS            =     Yes
     AO Basis        =     NONE
@@ -585,67 +584,74 @@ Total time:
     SCSN-MP2        =     False
     SCS-CCSD        =     False
 
-MP2 correlation energy -0.3105414800078447
+MP2 correlation energy -0.3105414800047855
                 Solving CC Amplitude Equations
                 ------------------------------
   Iter             Energy              RMS        T1Diag      D1Diag    New D1Diag    D2Diag
   ----     ---------------------    ---------   ----------  ----------  ----------   --------
-     0        -0.310541480007845    0.000e+00    0.000000    0.000000    0.000000    0.157982
-     1        -0.299540171355087    5.416e-02    0.009033    0.022570    0.022570    0.152338
-     2        -0.310204739947900    2.157e-02    0.008889    0.022016    0.022016    0.162528
-     3        -0.312648300645229    8.240e-03    0.009886    0.024387    0.024387    0.168660
-     4        -0.313018972850801    2.323e-03    0.009904    0.024447    0.024447    0.170517
-     5        -0.313039318629332    3.556e-04    0.009895    0.024435    0.024435    0.170690
-     6        -0.313039945845588    7.440e-05    0.009890    0.024428    0.024428    0.170690
-     7        -0.313041324692325    1.504e-05    0.009890    0.024428    0.024428    0.170694
-     8        -0.313040764189565    2.434e-06    0.009890    0.024428    0.024428    0.170694
-     9        -0.313040789306868    5.114e-07    0.009890    0.024428    0.024428    0.170694
-    10        -0.313040809726632    1.424e-07    0.009890    0.024428    0.024428    0.170694
-    11        -0.313040803525540    4.304e-08    0.009890    0.024428    0.024428    0.170694
-    12        -0.313040805309714    1.218e-08    0.009890    0.024428    0.024428    0.170694
+     0        -0.310541480004785    0.000e+00    0.000000    0.000000    0.000000    0.157982
+     1        -0.299540171352890    5.416e-02    0.009033    0.022570    0.022570    0.152338
+     2        -0.310204739945574    2.157e-02    0.008889    0.022016    0.022016    0.162528
+     3        -0.312648300642862    8.240e-03    0.009886    0.024387    0.024387    0.168660
+     4        -0.313018972848423    2.323e-03    0.009904    0.024447    0.024447    0.170517
+     5        -0.313039318626951    3.556e-04    0.009895    0.024435    0.024435    0.170690
+     6        -0.313039945843209    7.440e-05    0.009890    0.024428    0.024428    0.170690
+     7        -0.313041324689944    1.504e-05    0.009890    0.024428    0.024428    0.170694
+     8        -0.313040764187185    2.434e-06    0.009890    0.024428    0.024428    0.170694
+     9        -0.313040789304487    5.114e-07    0.009890    0.024428    0.024428    0.170694
+    10        -0.313040809724251    1.424e-07    0.009890    0.024428    0.024428    0.170694
+    11        -0.313040803523160    4.304e-08    0.009890    0.024428    0.024428    0.170694
+    12        -0.313040805704066    1.218e-08    0.009890    0.024428    0.024428    0.170694
+    13        -0.313040805170539    3.571e-09    0.009890    0.024428    0.024428    0.170694
+    14        -0.313040805350247    8.546e-10    0.009890    0.024428    0.024428    0.170694
+    15        -0.313040805327925    2.097e-10    0.009890    0.024428    0.024428    0.170694
+    16        -0.313040805322611    4.302e-11    0.009890    0.024428    0.024428    0.170694
+    17        -0.313040805321506    9.763e-12    0.009890    0.024428    0.024428    0.170694
+    18        -0.313040805321372    2.816e-12    0.009890    0.024428    0.024428    0.170694
+    19        -0.313040805321477    6.293e-13    0.009890    0.024428    0.024428    0.170694
 
     Iterations converged.
 
 
     Largest TIA Amplitudes:
-              5   4         0.0190192161
-              6   5         0.0190192161
-              5  13        -0.0107595973
-              6  14         0.0107595973
-              3   9        -0.0096920386
-              5  14         0.0078776244
-              6  13         0.0078776244
-              5   5         0.0075600710
-              6   4        -0.0075600710
-              3   2        -0.0044879370
+              5   4        -0.0199732716
+              6   5         0.0199732716
+              5  13         0.0133313866
+              6  14         0.0133313866
+              3   9        -0.0096920385
+              3   2        -0.0044879364
+              5   5         0.0044669562
+              6   4         0.0044669562
+              4   6         0.0042992959
+              3  10         0.0042511315
 
     Largest TIjAb Amplitudes:
-      5   5   0   0        -0.0818110377
-      6   6   1   1        -0.0818110377
-      3   3   0   0        -0.0464341099
-      3   3   1   1        -0.0464341099
-      5   6   0   1        -0.0426530877
-      6   5   1   0        -0.0426530877
-      5   5   0   1         0.0383983209
-      5   5   1   0         0.0383983209
-      5   6   0   0        -0.0383983209
-      5   6   1   1         0.0383983209
+      5   5   1   1        -0.0838788114
+      6   6   0   0        -0.0838788114
+      3   3   0   0        -0.0464341059
+      3   3   1   1        -0.0464341059
+      5   6   1   0        -0.0447208600
+      6   5   0   1        -0.0447208600
+      5   5   0   1         0.0371149347
+      5   5   1   0         0.0371149347
+      5   6   0   0         0.0371149347
+      5   6   1   1        -0.0371149347
 
-    SCF energy       (wfn)                    = -108.954153466896173
-    Reference energy (file100)                = -108.954153466896031
+    SCF energy       (wfn)                    = -108.954153466896315
+    Reference energy (file100)                = -108.954153466896258
 
-    Opposite-spin MP2 correlation energy      =   -0.227450511485794
-    Same-spin MP2 correlation energy          =   -0.083090968522051
-    MP2 correlation energy                    =   -0.310541480007845
-      * MP2 total energy                      = -109.264694946903873
+    Opposite-spin MP2 correlation energy      =   -0.227450511483470
+    Same-spin MP2 correlation energy          =   -0.083090968521315
+    MP2 correlation energy                    =   -0.310541480004785
+      * MP2 total energy                      = -109.264694946901045
 
-    Opposite-spin CCSD correlation energy     =   -0.245147578261309
-    Same-spin CCSD correlation energy         =   -0.067893227048405
-    CCSD correlation energy                   =   -0.313040805309714
-      * CCSD total energy                     = -109.267194272205742
+    Opposite-spin CCSD correlation energy     =   -0.245147578845828
+    Same-spin CCSD correlation energy         =   -0.067893226475649
+    CCSD correlation energy                   =   -0.313040805321477
+      * CCSD total energy                     = -109.267194272217736
 
 
-    Psi4 stopped on: Sunday, 01 December 2019 11:37PM
-    Psi4 wall time for execution: 0:00:17.92
+    Psi4 stopped on: Tuesday, 03 December 2019 06:45PM
+    Psi4 wall time for execution: 0:00:17.47
 
 *** Psi4 exiting successfully. Buy a developer a beer!
