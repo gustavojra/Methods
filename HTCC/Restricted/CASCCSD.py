@@ -10,9 +10,6 @@ from itertools import permutations
 file_dir = os.path.dirname('../../Aux/')
 sys.path.append(file_dir)
 
-file_dir = os.path.dirname('../../ecCC/Restricted/Modules/')
-sys.path.append(file_dir)
-
 from tools import *
 from ampcomp import tcompare
 from CASCI import CASCI
@@ -215,6 +212,13 @@ class CASCCSD:
             CASCI(active_space, nelec=self.nelec, OEI=self.h, TEI=self.Vint, return_as = True)
 
         self.Ecas = self.Ecas + self.Vnuc
+
+        self.Ccas = np.array(self.Ccas)
+        self.determinants = np.array(self.determinants)
+        s = np.argsort(abs(self.Ccas))
+        for c,d in zip(self.Ccas[s], self.determinants[s]):
+            print(c)
+            print(d)
 
         ############### STEP 2 ###############
         ############  CASDecom  ##############

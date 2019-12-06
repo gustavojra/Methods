@@ -1,7 +1,7 @@
 import os
 import sys
 import numpy as np
-from HTCCSD import HTCCSD
+from CASCCSD import CASCCSD
 
 molecule mol {
     0 1
@@ -22,9 +22,9 @@ set {
     GUESS         READ
 }
 
-X = HTCCSD(mol)
+X = CASCCSD(mol)
 
-X.HTCCSD('full', CC_CONV = 10, RELAX_T3T1 = False)
+X.compute('full', CC_CONV = 10, RELAX_T3T1 = False)
 
 print('CAS energy:   {:<5.10f}'.format(X.Ecas))
 print('CCSD Energy:  {:<5.10f}'.format(energy('ccsd')))

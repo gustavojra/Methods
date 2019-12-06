@@ -151,13 +151,7 @@ def CASCI(active_space, nelec, OEI, TEI, davidson = False, return_as = False):
     # Construct the Hamiltonian Matrix
     # Note: Input for two electron integral must be using Chemists' notation
 
-    #H = get_H(determinants, OEI, TEI.swapaxes(1,2), v = True, t = True)
-    t0 = time.time()
-    H = get_H(determinants, OEI, TEI.swapaxes(1,2))
-    print('H via conventional method. Time: {}'.format(time.time() - t0))
-    t0 = time.time()
-    Halt = get_Hp(determinants, OEI, TEI.swapaxes(1,2))
-    print('H via par method. Time:          {}'.format(time.time() - t0))
+    H = get_H(determinants, OEI, TEI.swapaxes(1,2), v = True, t = True)
 
     # Diagonalize the Hamiltonian Matrix
     print("Diagonalizing Hamiltonian Matrix\n")

@@ -3,14 +3,16 @@ import sys
 import numpy as np
 import time
 import copy
+import re
 
 sys.path.append('./')
 
 from CASDecom import CASDecom
+from Det import Det
 
 class CASCCSD:
 
-    def __init__(self, wfn):
+    def __init__(self, wfn, CC_CONV=6, CC_MAXITER=50, E_CONV = 8, MP2_GUESS=False, RELAX_T3T1=True):
 
         # Collect data from CI wavefunction
 
@@ -25,11 +27,15 @@ class CASCCSD:
         self.eps = np.asarray(wfn.epsilon_a())
         self.nbf = self.C.shape[0]
         self.Vnuc = wfn.molecule().nuclear_repulsion_energy()
+        self.fdocc = sum(wfn.frzcpi())
+        self.fvir = sum(wfn.frzvpi())
         
         print("Number of Electrons:            {}".format(self.nelec))
         print("Number of Basis Functions:      {}".format(self.nbf))
         print("Number of Molecular Orbitals:   {}".format(self.nmo))
         print("Number of Doubly ocuppied MOs:  {}\n".format(self.ndocc))
+        print("Number of Frozen dobly occ MOs: {}\n".format(self.fdocc))
+        print("Number of Frozen virtual MOs:   {}\n".format(self.fvir))
 
         # Build integrals from Psi4 MINTS
     
@@ -41,6 +47,8 @@ class CASCCSD:
         self.h = np.asarray(mints.ao_kinetic()) + np.asarray(mints.ao_potential())
         self.h = np.einsum('up,vq,uv->pq', self.C, self.C, self.h)
         print("Completed in {} seconds!".format(time.time()-t))
+
+        self.compute(CC_CONV, CC_MAXITER, E_CONV, MP2_GUESS, RELAX_T3T1)
 
     def cc_energy(self):
         
@@ -194,22 +202,72 @@ class CASCCSD:
 
         # Retrive CI coefficients and determinant objects from DETCI
 
-        ref = Det(a = '1'*ndocc + '0'*nvir, b = '1'*ndocc + '0'*nvir)
+        self.ref = Det(a = '1'*self.ndocc + '0'*self.nvir, b = '1'*self.ndocc + '0'*self.nvir)
 
+        pattern = '\s*?\*\s+?\d+?\s+?([-\s]\d\.\d+?)\s+?\(.+?\)\s+?(.+?\n)'
+        self.Ccas = []
+        self.determinants = []
+        dets_string = []
+        with open('output.dat', 'r') as output:
+            for line in output:
+                m = re.match(pattern, line)
+                if m:
+                    self.Ccas.append(float(m.group(1)))
+                    dets_string.append(m.group(2))
+        
+        for det in dets_string:
+            #print('Translating: {}'.format(det))
+            a_index = []
+            b_index = []
+            for o in det.split():
+               # print('Checking piece {}'.format(o))
+                if o[-1] == 'X' or o[-1] == 'A':
+                    a_index.append(int(o[:-2])-1)
+                 #   print('alpha occupied')
+                if o[-1] == 'X' or o[-1] == 'B':
+                    b_index.append(int(o[:-2])-1)
+                #    print('beta occupied')
+            #print(a_index)
+            #print(b_index)
+            a_string = '1'*self.fdocc
+            b_string = '1'*self.fdocc
+            #print(a_string)
+            #print(b_string)
+            for i in range(self.fdocc,self.nmo):
+                if i in a_index:
+                    a_string += '1'
+                else:
+                    a_string += '0'
+                if i in b_index:
+                    b_string += '1'
+                else:
+                    b_string += '0'
+            self.determinants.append(Det(a = a_string, b = b_string, ref = self.ref, sq = True))
+        for i,d in enumerate(self.determinants):
+            #print(d)
+            self.Ccas[i] *= d.order
+
+        #self.Ccas = np.array(self.Ccas)
+        #self.determinants = np.array(self.determinants)
+        #s = np.argsort(abs(self.Ccas))
+        #for c,d in zip(self.Ccas[s], self.determinants[s]):
+        #    print(c)
+        #    print(d)
 
         ############### STEP 2 ###############
         ############  CASDecom  ##############
 
         # Run CASDecom to translate CI coefficients into CC amplitudes
 
-        self.T1, self.T2, self.T3, self.T4abab, self.T4abaa = CASDecom(self.Ccas, self.determinants, self.ref, active_space)
+        self.T1, self.T2, self.T3, self.T4abab, self.T4abaa = \
+        CASDecom(self.Ccas, self.determinants, self.ref, fdocc = self.fdocc, fvir = self.fvir)
 
         # Compare CAS energy with the energy obtained from the translated amplitudes (They should be the same)
 
         self.cc_energy()
         print('\n')
-        print('CAS energy and initial TCC energy:')
-        print('CAS Energy: {:<5.10f}'.format(self.Ecas))
+        #print('CAS energy and initial TCC energy:')
+        #print('CAS Energy: {:<5.10f}'.format(self.Ecas))
         print('CC Energy:  {:<5.10f}'.format(self.Ecc + self.Escf))
 
         ############### STEP 3 ###############

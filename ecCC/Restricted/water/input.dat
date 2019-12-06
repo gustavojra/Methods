@@ -1,0 +1,33 @@
+import sys
+sys.path.append('../Modules/')
+from CASCCSD import CASCCSD
+
+molecule mol {
+    0 1
+    O
+    H 1 0.96
+    H 1 0.96 2 104.5
+    symmetry c1
+}
+
+set {
+    BASIS         cc-pvdz
+    REFERENCE     RHF
+    SCF_TYPE      PK
+    SOSCF         True
+    E_CONVERGENCE 8
+    MAXITER       100
+    MAX_ATTEMPTS  10
+    GUESS         READ
+    NUM_DETS_PRINT 10000
+    FROZEN_DOCC = [2]
+    FROZEN_UOCC = [14]
+    FCI           True
+    DETCI_FREEZE_CORE False
+}
+
+e, wfn = energy('detci', return_wfn=True)
+X = CASCCSD(wfn)
+
+print('CAS energy: {:<5.10f}'.format(e))
+print('CC  energy: {:<5.10f}'.format(X.Ecc))

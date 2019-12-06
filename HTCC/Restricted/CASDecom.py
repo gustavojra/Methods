@@ -28,7 +28,7 @@ import numpy as np
 ##############################################################################
 ##############################################################################
 
-def CASDecom(Ccas, determinants, ref, fdocc = 0, fvir = 0, return_t3 = True, return_t4 = True):
+def CASDecom(Ccas, determinants, ref, active_space, return_t3 = True, return_t4 = True):
 
     ############### STEP 1 ###############
     ##########  Initial Workup  ##########
@@ -46,7 +46,7 @@ def CASDecom(Ccas, determinants, ref, fdocc = 0, fvir = 0, return_t3 = True, ret
 
     # Get the C0 coefficient, corresponding to the reference determinant
 
-    C0 = Ccas[np.where(np.array(determinants) == ref)[0][0]]
+    C0 = Ccas[list(determinants).index(ref)]
     
     # Since CC requires a non zero coefficient for the reference, it is required that C0 be above a threshold
 
@@ -55,7 +55,7 @@ def CASDecom(Ccas, determinants, ref, fdocc = 0, fvir = 0, return_t3 = True, ret
 
     # Normalize the CI vector with respect to the reference
 
-    Ccas = np.array(Ccas)/C0
+    Ccas = Ccas/C0
     
     # Create the arrays for amplitudes, inititally they will be used to store CI coefficients then they will
     # be translated into CC amplitudes
@@ -207,8 +207,22 @@ def CASDecom(Ccas, determinants, ref, fdocc = 0, fvir = 0, return_t3 = True, ret
     # Create slices of the big T arrays. For small active spaces, most of these arrays are going to be zeros. Therefore, we only need 
     # the active part of it for the next step. This reduces the cost of the following tensor contractions.
 
-    h = slice(fdocc, ndocc)
-    p = slice(0, nvir-fvir)
+    active_core = 0
+    for x in active_space:
+        if x == 'o':
+            active_core += 1
+        else:
+            break
+
+    active_virtual = nvir
+    for x in active_space[::-1]:
+        if x == 'u':
+            active_virtual -= 1
+        else:
+            break
+
+    h = slice(active_core, ndocc)
+    p = slice(0, active_virtual)
 
     CAS_T1     = T1[h,p]
     CAS_T2     = T2[h,h,p,p]
