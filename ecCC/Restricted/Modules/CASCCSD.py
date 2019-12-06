@@ -1,37 +1,36 @@
 import psi4
-import os
 import sys
 import numpy as np
 import time
 import copy
-from itertools import permutations
 
-file_dir = os.path.dirname('./')
-sys.path.append(file_dir)
+sys.path.append('./')
 
 from CASDecom import CASDecom
 
 class CASCCSD:
 
-    def __init__(self, mol):
+    def __init__(self, wfn):
 
-        # Run SCF on Psi4 and collect data
+        # Collect data from CI wavefunction
 
-        self.Escf, wfn = psi4.energy('scf', return_wfn = True)
+        self.Escf = wfn.energy()
         self.nelec = wfn.nalpha() + wfn.nbeta()
+        if self.nelec % 2 != 0:
+            raise NameError('Number of electrons cannot be odd for RHF')
         self.C = wfn.Ca()
-        self.ndocc = wfn.doccpi()[0]
+        self.ndocc = int(self.nelec/2)
         self.nmo = wfn.nmo()
         self.nvir = self.nmo - self.ndocc
         self.eps = np.asarray(wfn.epsilon_a())
         self.nbf = self.C.shape[0]
-        self.Vnuc = mol.nuclear_repulsion_energy()
+        self.Vnuc = wfn.molecule().nuclear_repulsion_energy()
         
         print("Number of Electrons:            {}".format(self.nelec))
         print("Number of Basis Functions:      {}".format(self.nbf))
         print("Number of Molecular Orbitals:   {}".format(self.nmo))
         print("Number of Doubly ocuppied MOs:  {}\n".format(self.ndocc))
-    
+
         # Build integrals from Psi4 MINTS
     
         print("Converting atomic integrals to MO integrals...")
@@ -180,18 +179,9 @@ class CASCCSD:
         # Apply permutation
         self.T3onT2sec += np.einsum('ijab -> jiba', self.T3onT2sec)
 
-    def compute(self, active_space='', CC_CONV=6, CC_MAXITER=50, E_CONV = 8, MP2_GUESS=False, RELAX_T3T1=True):
+    def compute(self, CC_CONV=6, CC_MAXITER=50, E_CONV = 8, MP2_GUESS=False, RELAX_T3T1=True):
 
-        # This is the main function in this code. After initializing the class object you need to call this
-        # function to compute TCC energies. Thus, your Psi4 input needs to contain:
-        """
-         from HTCCSD import HTCCSD
-         ...
-         molecule
-         ...
-         example = HTCCSD(molecule)
-         example.HTCCSD(inputs)
-        """
+        # This is the main function of this code.
         # The correlation energy will be avaliable as example.Ecc
         # This function works in a 4 steps process:
         # - CASCI computation
@@ -200,14 +190,12 @@ class CASCCSD:
         # - CCSD computation
         
         ############### STEP 1 ###############
-        ##############  CASCI  ###############
+        ##############  DETCI  ###############
 
-        # Compute CASCI with the given active space
+        # Retrive CI coefficients and determinant objects from DETCI
 
-        self.Ecas, self.Ccas, self.ref, self.determinants, active_space = \
-            CASCI(active_space, nelec=self.nelec, OEI=self.h, TEI=self.Vint, return_as = True)
+        ref = Det(a = '1'*ndocc + '0'*nvir, b = '1'*ndocc + '0'*nvir)
 
-        self.Ecas = self.Ecas + self.Vnuc
 
         ############### STEP 2 ###############
         ############  CASDecom  ##############
