@@ -1,7 +1,7 @@
 # Methods
 
- - Complete Active Space Configuration Interaction (CASCI)
- - Restricted Coupled Cluster Singles Doubles (CCSD)
+Under construction
+
  - Tailored Coupled Cluster Singles Doubles (TCCSD)
- - High Order Tailored Coupled Cluster Singles Doubles (HTCCSD)
+ - Externally Corrected Coupled Cluster (ecCC)
 
