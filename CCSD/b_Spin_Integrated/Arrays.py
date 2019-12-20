@@ -258,44 +258,19 @@ T2 = np.einsum('abij,ijab->ijab', Vint[v,v,o,o], D)
 
 E = cc_energy(T1, T2)
 
-print('MP2 Cor Energy: {:<5.10f}     Time required: {:.5f}'.format(E, time.time()-t))
 print('MP2 Energy: {:<5.10f}     Time required: {:.5f}'.format(E+scf_e, time.time()-t))
 
-r1 = 0
-r2 = 1
-CC_CONV = 7
-CC_MAXITER = 30
-    
-LIM = 10**(-CC_CONV)
-
-ite = 0
-
-T1, T2, r1, r2 = CCSD_Iter(T1, T2, pr = True)
+tau = T2 + np.einsum('ia,jb->ijab', T1, T1)
+E1  = np.einsum('uaij,va->uvij', Vint[o,v,o,o], T1)
+D2l = np.einsum('abij,uvab->uvij',Vint[v,v,o,o], tau)
+X = E1 + D2l
+X = 2*X - X.transpose(0,1,3,2)
+giu = np.einsum('ujij->ui', X)
 
 
-#while r2 > LIM or r1 > LIM:
-#    ite += 1
-#    if ite > CC_MAXITER:
-#        raise NameError("CC Equations did not converge in {} iterations".format(CC_MAXITER))
-#    Eold = E
-#    t = time.time()
-#    T1, T2, r1, r2 = CCSD_Iter(T1, T2)
-#    E = cc_energy(T1, T2)
-#    dE = E - Eold
-#    print('-'*50)
-#    print("Iteration {}".format(ite))
-#    print("CC Correlation energy: {}".format(E))
-#    print("Energy change:         {}".format(dE))
-#    print("T1 Residue:            {}".format(r1))
-#    print("T2 Residue:            {}".format(r2))
-#    print("Max T1 Amplitude:      {}".format(np.max(T1)))
-#    print("Max T2 Amplitude:      {}".format(np.max(T2)))
-#    print("Time required:         {}".format(time.time() - t))
-#    print('-'*50)
-#
-#print("\nCC Equations Converged!!!")
-#print("Final CCSD Energy:     {:<5.10f}".format(E + scf_e))
-#print('CCSD Energy from Psi4: {:<5.10f}'.format(p4_ccsd))
-#print("Total Computation time:        {}".format(time.time() - tinit))
-
-
+F1s = np.einsum('acpi,ib->acpb', Vint[v,v,v,o], T1)
+D2ps= np.einsum('acij,ijpb->acpb',Vint[v,v,o,o], tau)
+Y = F1s - D2ps
+X = 2*Y - Y.transpose(1,0,2,3) 
+gap = np.einsum('abpb->ap', X)
+printmatrix(gap)

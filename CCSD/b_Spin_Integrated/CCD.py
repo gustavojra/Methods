@@ -10,36 +10,7 @@ sys.path.append(file_dir)
 
 from tools import *
 
-np.set_printoptions(suppress=True)
-
 ### FUNCTIONS ###
-
-def printtensor(T):
-    dims = np.shape(T)
-    rank = len(dims)
-    i_range = range(0,dims[0])
-    j_range = range(0,dims[1])
-    for i in i_range:
-        for j in j_range:
-            print('Page ({},{},*,*)\n'.format(i,j))
-            printmatrix(T[i,j,:,:])
-
-def printmatrix(M):
-    dims = np.shape(M)
-    rank = len(dims)
-    out = ' '*5
-    i_range = range(0,dims[0])
-    j_range = range(0,dims[1])
-    # header
-    for j in j_range:
-        out += '{:>11}    '.format(j)
-    out += '\n'
-    for i in i_range:
-        out += '{:3d}  '.format(i)
-        for j in j_range:
-            out += '{:< 10.8f}    '.format(M[i,j])
-        out += '\n'
-    print(out)
 
 def cc_energy(T1, T2):
 
@@ -48,7 +19,7 @@ def cc_energy(T1, T2):
     E = np.einsum('abij,ijab->', Vint[v,v,o,o], X)
     return E
 
-def CCSD_Iter(T1, T2, EINSUMOPT='optimal', pr = False):
+def CCSD_Iter(T1, T2, EINSUMOPT='optimal'):
 
     # Intermediate arrays
 
@@ -79,13 +50,6 @@ def CCSD_Iter(T1, T2, EINSUMOPT='optimal', pr = False):
 
     X = E1 + D2l
     giu = np.einsum('ujij->ui', 2*X - X.transpose(0,1,3,2),optimize=EINSUMOPT)
-    if pr:
-        print('E1')
-        printtensor(E1)
-        print('\n D2p')
-        printtensor(D2l)
-        print('\nGiu')
-        printmatrix(giu)
     
     X = Fs1 - Ds2l
     gap = np.einsum('abpb->ap', 2*X - X.transpose(1,0,2,3),optimize=EINSUMOPT)
@@ -122,9 +86,9 @@ def CCSD_Iter(T1, T2, EINSUMOPT='optimal', pr = False):
     T1new += np.einsum('uip->up', C1,optimize=EINSUMOPT)
     T1new -= 2*np.einsum('uipi->up', D1,optimize=EINSUMOPT)
 
-    T1new = np.einsum('up,up->up', T1new, d,optimize=EINSUMOPT)
-    
-    res1 = np.sum(np.abs(T1new - T1))
+    T1new[:] = 0
+
+    res1 = 0
 
     return T1new, T2new, res1, res2
 
@@ -138,12 +102,10 @@ def CCSD_Iter(T1, T2, EINSUMOPT='optimal', pr = False):
 #""")
 
 water = psi4.geometry("""
+    0 1
     O
-    H 1 R
-    H 1 R 2 A
-    
-    R = .9
-    A = 104.5
+    H 1 1.1
+    H 1 1.1 2 104.0
     symmetry c1
 """)
 
@@ -179,7 +141,7 @@ psi4.core.be_quiet()
 psi4.set_options({'basis': basis,
                   'scf_type': 'pk',
                   'mp2_type': 'conv',
-                  'e_convergence' : 1e-10,
+                  'e_convergence' : 1e-12,
                   'freeze_core': 'false'})
 
 # Run Psi4 Energie
@@ -216,7 +178,6 @@ mints = psi4.core.MintsHelper(wfn.basisset())
 Vint = np.asarray(mints.mo_eri(C, C, C, C))
 # Convert to physicist notation
 Vint = Vint.swapaxes(1,2)
-Vchem = Vint.swapaxes(1,2)
 print("Completed in {} seconds!".format(time.time()-t))
 
 # Slices
@@ -241,12 +202,6 @@ for i,ei in enumerate(eps[o]):
             for b,eb in enumerate(eps[v]):
                 D[i,j,a,b] = 1/(ei + ej - ea - eb)
 
-#Vchemvir = Vchem[o,o,o,o]
-#for i in range(ndocc):
-#    for j in range(ndocc):
-#        print(Vchemvir[i,j,:,:])
-#        print('-'*40)
-
 print('Done. Time required: {:.5f} seconds'.format(time.time() - t))
 
 print('\nComputing MP2 guess')
@@ -258,44 +213,40 @@ T2 = np.einsum('abij,ijab->ijab', Vint[v,v,o,o], D)
 
 E = cc_energy(T1, T2)
 
-print('MP2 Cor Energy: {:<5.10f}     Time required: {:.5f}'.format(E, time.time()-t))
 print('MP2 Energy: {:<5.10f}     Time required: {:.5f}'.format(E+scf_e, time.time()-t))
 
 r1 = 0
 r2 = 1
-CC_CONV = 7
+CC_CONV = 15
 CC_MAXITER = 30
     
 LIM = 10**(-CC_CONV)
 
 ite = 0
 
-T1, T2, r1, r2 = CCSD_Iter(T1, T2, pr = True)
+while r2 > LIM or r1 > LIM:
+    ite += 1
+    if ite > CC_MAXITER:
+        raise NameError("CC Equations did not converge in {} iterations".format(CC_MAXITER))
+    Eold = E
+    t = time.time()
+    T1, T2, r1, r2 = CCSD_Iter(T1, T2)
+    E = cc_energy(T1, T2)
+    dE = E - Eold
+    print('-'*50)
+    print("Iteration {}".format(ite))
+    print("CC Correlation energy: {}".format(E))
+    print("Energy change:         {}".format(dE))
+    print("T1 Residue:            {}".format(r1))
+    print("T2 Residue:            {}".format(r2))
+    print("Max T1 Amplitude:      {}".format(np.max(T1)))
+    print("Max T2 Amplitude:      {}".format(np.max(T2)))
+    print("Time required:         {}".format(time.time() - t))
+    print('-'*50)
 
-
-#while r2 > LIM or r1 > LIM:
-#    ite += 1
-#    if ite > CC_MAXITER:
-#        raise NameError("CC Equations did not converge in {} iterations".format(CC_MAXITER))
-#    Eold = E
-#    t = time.time()
-#    T1, T2, r1, r2 = CCSD_Iter(T1, T2)
-#    E = cc_energy(T1, T2)
-#    dE = E - Eold
-#    print('-'*50)
-#    print("Iteration {}".format(ite))
-#    print("CC Correlation energy: {}".format(E))
-#    print("Energy change:         {}".format(dE))
-#    print("T1 Residue:            {}".format(r1))
-#    print("T2 Residue:            {}".format(r2))
-#    print("Max T1 Amplitude:      {}".format(np.max(T1)))
-#    print("Max T2 Amplitude:      {}".format(np.max(T2)))
-#    print("Time required:         {}".format(time.time() - t))
-#    print('-'*50)
-#
-#print("\nCC Equations Converged!!!")
-#print("Final CCSD Energy:     {:<5.10f}".format(E + scf_e))
-#print('CCSD Energy from Psi4: {:<5.10f}'.format(p4_ccsd))
-#print("Total Computation time:        {}".format(time.time() - tinit))
+print("\nCC Equations Converged!!!")
+print("Final CCD Energy:      {:<5.10f}".format(E + scf_e))
+print('CCSD Energy from Psi4: {:<5.10f}'.format(p4_ccsd))
+print("Total Computation time:        {}".format(time.time() - tinit))
 
 
