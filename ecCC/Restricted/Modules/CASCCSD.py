@@ -9,6 +9,16 @@ sys.path.append('./')
 
 from CASDecom import CASDecom
 from Det import Det
+from CIfromDETCI import read_ci_vec
+
+print_to_output = True
+
+def printout(x):
+    if print_to_output:
+        psi4.core.print_out(x)
+        psi4.core.print_out('\n')
+    else:
+        print(x)
 
 class CASCCSD:
 
@@ -30,23 +40,27 @@ class CASCCSD:
         self.fdocc = sum(wfn.frzcpi())
         self.fvir = sum(wfn.frzvpi())
         
-        print("Number of Electrons:            {}".format(self.nelec))
-        print("Number of Basis Functions:      {}".format(self.nbf))
-        print("Number of Molecular Orbitals:   {}".format(self.nmo))
-        print("Number of Doubly ocuppied MOs:  {}\n".format(self.ndocc))
-        print("Number of Frozen dobly occ MOs: {}\n".format(self.fdocc))
-        print("Number of Frozen virtual MOs:   {}\n".format(self.fvir))
+        printout(\
+        """---------------------------------------------------------
+                          CASCCSD STARTED
+        ---------------------------------------------------------""")
+        printout("Number of Electrons:            {}".format(self.nelec))
+        printout("Number of Basis Functions:      {}".format(self.nbf))
+        printout("Number of Molecular Orbitals:   {}".format(self.nmo))
+        printout("Number of Doubly ocuppied MOs:  {}\n".format(self.ndocc))
+        printout("Number of Frozen dobly occ MOs: {}\n".format(self.fdocc))
+        printout("Number of Frozen virtual MOs:   {}\n".format(self.fvir))
 
         # Build integrals from Psi4 MINTS
     
-        print("Converting atomic integrals to MO integrals...")
+        printout("Converting atomic integrals to MO integrals...")
         t = time.time()
         mints = psi4.core.MintsHelper(wfn.basisset())
         self.Vint = np.asarray(mints.mo_eri(self.C, self.C, self.C, self.C))
         self.Vint = self.Vint.swapaxes(1,2) # Convert to Physicists' notation
         self.h = np.asarray(mints.ao_kinetic()) + np.asarray(mints.ao_potential())
         self.h = np.einsum('up,vq,uv->pq', self.C, self.C, self.h)
-        print("Completed in {} seconds!".format(time.time()-t))
+        printout("Completed in {} seconds!".format(time.time()-t))
 
         self.compute(CC_CONV, CC_MAXITER, E_CONV, MP2_GUESS, RELAX_T3T1)
 
@@ -204,55 +218,7 @@ class CASCCSD:
 
         self.ref = Det(a = '1'*self.ndocc + '0'*self.nvir, b = '1'*self.ndocc + '0'*self.nvir)
 
-        pattern = '\s*?\*\s+?\d+?\s+?([-\s]\d\.\d+?)\s+?\(.+?\)\s+?(.+?\n)'
-        self.Ccas = []
-        self.determinants = []
-        dets_string = []
-        with open('output.dat', 'r') as output:
-            for line in output:
-                m = re.match(pattern, line)
-                if m:
-                    self.Ccas.append(float(m.group(1)))
-                    dets_string.append(m.group(2))
-        
-        for det in dets_string:
-            #print('Translating: {}'.format(det))
-            a_index = []
-            b_index = []
-            for o in det.split():
-               # print('Checking piece {}'.format(o))
-                if o[-1] == 'X' or o[-1] == 'A':
-                    a_index.append(int(o[:-2])-1)
-                 #   print('alpha occupied')
-                if o[-1] == 'X' or o[-1] == 'B':
-                    b_index.append(int(o[:-2])-1)
-                #    print('beta occupied')
-            #print(a_index)
-            #print(b_index)
-            a_string = '1'*self.fdocc
-            b_string = '1'*self.fdocc
-            #print(a_string)
-            #print(b_string)
-            for i in range(self.fdocc,self.nmo):
-                if i in a_index:
-                    a_string += '1'
-                else:
-                    a_string += '0'
-                if i in b_index:
-                    b_string += '1'
-                else:
-                    b_string += '0'
-            self.determinants.append(Det(a = a_string, b = b_string, ref = self.ref, sq = True))
-        for i,d in enumerate(self.determinants):
-            #print(d)
-            self.Ccas[i] *= d.order
-
-        #self.Ccas = np.array(self.Ccas)
-        #self.determinants = np.array(self.determinants)
-        #s = np.argsort(abs(self.Ccas))
-        #for c,d in zip(self.Ccas[s], self.determinants[s]):
-        #    print(c)
-        #    print(d)
+        self.Ccas, self.determinants = read_ci_vec(self.ref, self.fdocc, self.nmo)
 
         ############### STEP 2 ###############
         ############  CASDecom  ##############
@@ -265,10 +231,10 @@ class CASCCSD:
         # Compare CAS energy with the energy obtained from the translated amplitudes (They should be the same)
 
         self.cc_energy()
-        print('\n')
-        #print('CAS energy and initial TCC energy:')
-        #print('CAS Energy: {:<5.10f}'.format(self.Ecas))
-        print('CC Energy:  {:<5.10f}'.format(self.Ecc + self.Escf))
+        printout('\n')
+        #printout('CAS energy and initial TCC energy:')
+        #printout('CAS Energy: {:<5.10f}'.format(self.Ecas))
+        printout('CC Energy:  {:<5.10f}'.format(self.Ecc + self.Escf))
 
         ############### STEP 3 ###############
         ######  T3 & T4 contributions  #######
@@ -312,7 +278,7 @@ class CASCCSD:
 
         # Build the Auxiliar Matrix D
 
-        print('Building Auxiliar D matrices...\n')
+        printout('Building Auxiliar D matrices...\n')
         t = time.time()
         self.D  = np.zeros([self.ndocc, self.ndocc, self.nvir, self.nvir])
         self.d  = np.zeros([self.ndocc, self.nvir])
@@ -322,7 +288,7 @@ class CASCCSD:
         self.d = 1.0/(self.eps[new, v] - self.eps[o, new])
         self.D = 1.0/(self.eps[o, new, new, new] + self.eps[new, o, new, new] - self.eps[new, new, v, new] - self.eps[new, new, new, v])
 
-        print('Done. Time required: {:.5f} seconds'.format(time.time() - t))
+        printout('Done. Time required: {:.5f} seconds'.format(time.time() - t))
         t = time.time()
         
         if MP2_GUESS:
@@ -332,7 +298,7 @@ class CASCCSD:
             self.T1 = np.zeros([self.ndocc, self.nvir])
             self.T2  = np.einsum('ijab,ijab->ijab', self.Vint[o,o,v,v], self.D)
             self.cc_energy()
-            print('MP2 Energy: {:<5.10f}'.format(self.Ecc+self.Escf))
+            printout('MP2 Energy: {:<5.10f}'.format(self.Ecc+self.Escf))
             
         self.r1 = 1
         self.r2 = 1
@@ -341,8 +307,8 @@ class CASCCSD:
         ELIM = 10**(-E_CONV)
         ite = 0
 
-        print('\n Starting CCSD Iterations')
-        print('='*36)
+        printout('\n Starting CCSD Iterations')
+        printout('='*36)
 
         tcc = time.time()
         while self.r2 > LIM or self.r1 > LIM or abs(dE) > ELIM:
@@ -354,15 +320,15 @@ class CASCCSD:
             self.T1_T2_Update(RELAX_T3T1 = RELAX_T3T1)
             self.cc_energy()
             dE = self.Ecc - Eold
-            print("Iteration {}".format(ite))
-            print("Correlation energy:    {:<5.10f}".format(self.Ecc))
-            print("Energy change:         {:<5.10f}".format(dE))
-            print("T1 Residue:            {:>13.2E}".format(self.r1))
-            print("T2 Residue:            {:>13.2E}".format(self.r2))
-            print("Time required (s):     {:< 5.10f}".format(time.time() - t))
-            print('='*36)
+            printout("Iteration {}".format(ite))
+            printout("Correlation energy:    {:<5.10f}".format(self.Ecc))
+            printout("Energy change:         {:<5.10f}".format(dE))
+            printout("T1 Residue:            {:>13.2E}".format(self.r1))
+            printout("T2 Residue:            {:>13.2E}".format(self.r2))
+            printout("Time required (s):     {:< 5.10f}".format(time.time() - t))
+            printout('='*36)
         tcc = time.time() - tcc 
         self.Ecc = self.Ecc + self.Escf
-        print("\nCC Equations Converged!!!")
-        print("Time required: {}".format(tcc))
-        print("Final TCCSD Energy:     {:<5.10f}".format(self.Ecc))
+        printout("\nCC Equations Converged!!!")
+        printout("Time required: {}".format(tcc))
+        printout("Final CASCCSD Energy:     {:<5.10f}".format(self.Ecc))

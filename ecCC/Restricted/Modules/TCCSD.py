@@ -10,6 +10,16 @@ sys.path.append('./')
 
 from CASDecom import CASDecom
 from Det import Det
+from CIfromDETCI import read_ci_vec
+
+print_to_output = True
+
+def printout(x):
+    if print_to_output:
+        psi4.core.print_out(x)
+        psi4.core.print_out('\n')
+    else:
+        print(x)
 
 class TCCSD:
 
@@ -31,23 +41,27 @@ class TCCSD:
         self.fdocc = sum(wfn.frzcpi())
         self.fvir = sum(wfn.frzvpi())
         
-        print("Number of Electrons:            {}".format(self.nelec))
-        print("Number of Basis Functions:      {}".format(self.nbf))
-        print("Number of Molecular Orbitals:   {}".format(self.nmo))
-        print("Number of Doubly ocuppied MOs:  {}\n".format(self.ndocc))
-        print("Number of Frozen dobly occ MOs: {}\n".format(self.fdocc))
-        print("Number of Frozen virtual MOs:   {}\n".format(self.fvir))
+        printout(\
+        """---------------------------------------------------------
+                            TCCSD STARTED
+        ---------------------------------------------------------""")
+        printout("Number of Electrons:            {}".format(self.nelec))
+        printout("Number of Basis Functions:      {}".format(self.nbf))
+        printout("Number of Molecular Orbitals:   {}".format(self.nmo))
+        printout("Number of Doubly ocuppied MOs:  {}\n".format(self.ndocc))
+        printout("Number of Frozen dobly occ MOs: {}\n".format(self.fdocc))
+        printout("Number of Frozen virtual MOs:   {}\n".format(self.fvir))
 
         # Build integrals from Psi4 MINTS
     
-        print("Converting atomic integrals to MO integrals...")
+        printout("Converting atomic integrals to MO integrals.")
         t = time.time()
         mints = psi4.core.MintsHelper(wfn.basisset())
         self.Vint = np.asarray(mints.mo_eri(self.C, self.C, self.C, self.C))
         self.Vint = self.Vint.swapaxes(1,2) # Convert to Physicists' notation
         self.h = np.asarray(mints.ao_kinetic()) + np.asarray(mints.ao_potential())
         self.h = np.einsum('up,vq,uv->pq', self.C, self.C, self.h)
-        print("Completed in {} seconds!".format(time.time()-t))
+        printout("Completed in {} seconds!".format(time.time()-t))
 
         self.compute(CC_CONV=CC_CONV, E_CONV=E_CONV, CC_MAXITER=CC_MAXITER)
 
@@ -155,48 +169,7 @@ class TCCSD:
 
         self.ref = Det(a = '1'*self.ndocc + '0'*self.nvir, b = '1'*self.ndocc + '0'*self.nvir)
 
-        pattern = '\s*?\*\s+?\d+?\s+?([-\s]\d\.\d+?)\s+?\(.+?\)\s+?(.+?\n)'
-        self.Ccas = []
-        self.determinants = []
-        dets_string = []
-        with open('output.dat', 'r') as output:
-            for line in output:
-                m = re.match(pattern, line)
-                if m:
-                    self.Ccas.append(float(m.group(1)))
-                    dets_string.append(m.group(2))
-        
-        for det in dets_string:
-            #print('Translating: {}'.format(det))
-            a_index = []
-            b_index = []
-            for o in det.split():
-               # print('Checking piece {}'.format(o))
-                if o[-1] == 'X' or o[-1] == 'A':
-                    a_index.append(int(o[:-2])-1)
-                 #   print('alpha occupied')
-                if o[-1] == 'X' or o[-1] == 'B':
-                    b_index.append(int(o[:-2])-1)
-                #    print('beta occupied')
-            #print(a_index)
-            #print(b_index)
-            a_string = '1'*self.fdocc
-            b_string = '1'*self.fdocc
-            #print(a_string)
-            #print(b_string)
-            for i in range(self.fdocc,self.nmo):
-                if i in a_index:
-                    a_string += '1'
-                else:
-                    a_string += '0'
-                if i in b_index:
-                    b_string += '1'
-                else:
-                    b_string += '0'
-            self.determinants.append(Det(a = a_string, b = b_string, ref = self.ref, sq = True))
-        for i,d in enumerate(self.determinants):
-            #print(d)
-            self.Ccas[i] *= d.order
+        self.Ccas, self.determinants = read_ci_vec(self.ref, self.fdocc, self.nmo)
         
         ############### STEP 2 ###############
         ############  CASDecom  ##############
@@ -224,7 +197,7 @@ class TCCSD:
 
         # Build the Auxiliar Matrix D
 
-        print('Building Auxiliar D matrix...\n')
+        printout('Building Auxiliar D matrix...\n')
         t = time.time()
         self.D  = np.zeros([self.ndocc, self.ndocc, self.nvir, self.nvir])
         self.d  = np.zeros([self.ndocc, self.nvir])
@@ -236,7 +209,7 @@ class TCCSD:
                     for b,eb in enumerate(self.eps[v]):
                         self.D[i,j,a,b] = 1/(ei + ej - ea - eb)
 
-        print('Done. Time required: {:.5f} seconds'.format(time.time() - t))
+        printout('Done. Time required: {:.5f} seconds'.format(time.time() - t))
         t = time.time()
         
         # Generate initial T1 and T2 amplitudes
@@ -249,7 +222,7 @@ class TCCSD:
 
         self.cc_energy()
 
-        print('CC Energy from CAS Amplitudes: {:<5.10f}'.format(self.Ecc+self.Escf))
+        printout('CC Energy from CAS Amplitudes: {:<5.10f}'.format(self.Ecc+self.Escf))
 
         self.r1 = 1
         self.r2 = 1
@@ -267,17 +240,17 @@ class TCCSD:
             self.T1_T2_Update()
             self.cc_energy()
             dE = self.Ecc - Eold
-            print("Iteration {}".format(ite))
-            print("Correlation energy:    {:<5.10f}".format(self.Ecc))
-            print("Energy change:         {:<5.10f}".format(dE))
-            print("T1 Residue:            {:>13.2E}".format(self.r1))
-            print("T2 Residue:            {:>13.2E}".format(self.r2))
-            print("Time required (s):     {:< 5.10f}".format(time.time() - t))
-            print('='*36)
+            printout("Iteration {}".format(ite))
+            printout("Correlation energy:    {:<5.10f}".format(self.Ecc))
+            printout("Energy change:         {:<5.10f}".format(dE))
+            printout("T1 Residue:            {:>13.2E}".format(self.r1))
+            printout("T2 Residue:            {:>13.2E}".format(self.r2))
+            printout("Time required (s):     {:< 5.10f}".format(time.time() - t))
+            printout('='*36)
         self.Ecc = self.Ecc + self.Escf
 
-        print("\nTCC Equations Converged!!!")
-        print("Final TCCSD Energy:     {:<5.10f}".format(self.Ecc))
+        printout("\nTCC Equations Converged!!!")
+        printout("Final TCCSD Energy:     {:<5.10f}".format(self.Ecc))
 
         
         

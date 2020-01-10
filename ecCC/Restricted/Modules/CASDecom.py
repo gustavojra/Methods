@@ -1,3 +1,4 @@
+import psi4
 import numpy as np
 
 ##############################################################################
@@ -28,6 +29,15 @@ import numpy as np
 ##############################################################################
 ##############################################################################
 
+print_to_output = True
+
+def printout(x):
+    if print_to_output:
+        psi4.core.print_out(x)
+        psi4.core.print_out('\n')
+    else:
+        print(x)
+
 def CASDecom(Ccas, determinants, ref, fdocc = 0, fvir = 0, return_t3 = True, return_t4 = True):
 
     ############### STEP 1 ###############
@@ -37,7 +47,7 @@ def CASDecom(Ccas, determinants, ref, fdocc = 0, fvir = 0, return_t3 = True, ret
     if return_t4 and not return_t3:
         raise NameError('Cannot return T4 without T3, please set return_t3 = True. Could I do that automatically? Yes, but this is pedagogical.')
 
-    print('\n --------- CASDecom STARTED --------- \n')
+    printout('\n --------- CASDecom STARTED --------- \n')
 
     # Get number of doubly occupied and virtual orbitals from the reference determinant
 
@@ -52,6 +62,8 @@ def CASDecom(Ccas, determinants, ref, fdocc = 0, fvir = 0, return_t3 = True, ret
 
     if abs(C0) < 0.01:
         raise NameError('Leading Coefficient too small C0 = {}\n Restricted orbitals not appropriate.'.format(C0))
+
+    printout('Abs C0 value: {:<5.5f}'.format(abs(C0)))
 
     # Normalize the CI vector with respect to the reference
 
@@ -73,7 +85,7 @@ def CASDecom(Ccas, determinants, ref, fdocc = 0, fvir = 0, return_t3 = True, ret
     ############### STEP 2 ###############
     ####  CI coefficients collections ####
 
-    print('Collecting CI coefficients from CASCI eigenvector')
+    printout('Collecting CI coefficients from CASCI eigenvector')
     for det,ci in zip(determinants, Ccas):
         if det - ref == 2:
 
@@ -204,7 +216,7 @@ def CASDecom(Ccas, determinants, ref, fdocc = 0, fvir = 0, return_t3 = True, ret
                 T4abab[i,l,k,j,c,d,a,b] = -ci
                 T4abab[i,l,k,j,c,b,a,d] =  ci
 
-    print('Collection completed.\n')
+    printout('Collection completed.\n')
 
     # Create slices of the big T arrays. For small active spaces, most of these arrays are going to be zeros. Therefore, we only need 
     # the active part of it for the next step. This reduces the cost of the following tensor contractions.
@@ -225,21 +237,21 @@ def CASDecom(Ccas, determinants, ref, fdocc = 0, fvir = 0, return_t3 = True, ret
     ############### STEP 3 ###############
     ######  Cluster Decomposition  #######
 
-    print('Cluster Decomposition Started')
+    printout('Cluster Decomposition Started')
     
     # Singles: equivalent to CI
-    print('   -> T1        done.')
+    printout('   -> T1        done.')
     
     # Doubles
     CAS_T2 += - np.einsum('ia,jb-> ijab', CAS_T1, CAS_T1, optimize='optimal')
 
-    print('   -> T2        done.')
+    printout('   -> T2        done.')
 
     if not return_t3:
         T1[h,p]                 =   CAS_T1     
         T2[h,h,p,p]             =   CAS_T2     
-        print('Decomposition completed.')
-        print('\n --------- CASDecom FINISHED ---------\n')
+        printout('Decomposition completed.')
+        printout('\n --------- CASDecom FINISHED ---------\n')
         return T1, T2
 
     ## Compute the spin case a,a -> a,a from the mixed spin case: Used for T3 and T4.
@@ -259,14 +271,14 @@ def CASDecom(Ccas, determinants, ref, fdocc = 0, fvir = 0, return_t3 = True, ret
               - t1t1                                                             \
               + t1t1.transpose(0,1,2,5,4,3)
 
-    print('   -> T3        done.')
+    printout('   -> T3        done.')
 
     if not return_t4:
         T1[h,p]                 =   CAS_T1     
         T2[h,h,p,p]             =   CAS_T2     
         T3[h,h,h,p,p,p]         =   CAS_T3     
-        print('Decomposition completed.')
-        print('\n --------- CASDecom FINISHED ---------\n')
+        printout('Decomposition completed.')
+        printout('\n --------- CASDecom FINISHED ---------\n')
         return T1, T2, T3
 
     ### Compute the spin case a,a,a -> a,a,a from the mixed spin case: Used for T4
@@ -353,7 +365,7 @@ def CASDecom(Ccas, determinants, ref, fdocc = 0, fvir = 0, return_t3 = True, ret
                   - t1t1t1t1.transpose(0,1,3,2,7,5,6,4) \
                   + t1t1t1t1.transpose(0,1,2,3,7,5,6,4) 
 
-    print('   -> T4 (ABAA) done.')
+    printout('   -> T4 (ABAA) done.')
 
     ## Second case: abab -> abab
     
@@ -419,8 +431,8 @@ def CASDecom(Ccas, determinants, ref, fdocc = 0, fvir = 0, return_t3 = True, ret
                   + t1t1t1t1.transpose(0,1,2,3,6,5,4,7) \
                   - t1t1t1t1.transpose(0,1,2,3,6,7,4,5) 
 
-    print('   -> T4 (ABAB) done.')
-    print('Decomposition completed.')
+    printout('   -> T4 (ABAB) done.')
+    printout('Decomposition completed.')
 
     ### These next few lines are just for safety:
     ### Making sure that the modifications in the slices were traferred properly to the original arrays. Note
@@ -432,6 +444,6 @@ def CASDecom(Ccas, determinants, ref, fdocc = 0, fvir = 0, return_t3 = True, ret
     T4abaa[h,h,h,h,p,p,p,p] =   CAS_T4abaa 
     T4abab[h,h,h,h,p,p,p,p] =   CAS_T4abab 
 
-    print('\n --------- CASDecom FINISHED ---------\n')
+    printout('\n --------- CASDecom FINISHED ---------\n')
 
     return T1, T2, T3, T4abab, T4abaa
