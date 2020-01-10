@@ -3,4 +3,8 @@ timer.dat
 output.dat
 __pycache__
 *.clean
+*.e*
+*.o*
+*.sh
+ijk.dat
 
