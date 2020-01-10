@@ -48,7 +48,7 @@ def cc_energy(T1, T2):
     E = np.einsum('abij,ijab->', Vint[v,v,o,o], X)
     return E
 
-def CCSD_Iter(T1, T2, EINSUMOPT='optimal', pr = False):
+def CCSD_Iter(T1, T2, EINSUMOPT='optimal'):
 
     # Intermediate arrays
 
@@ -79,13 +79,6 @@ def CCSD_Iter(T1, T2, EINSUMOPT='optimal', pr = False):
 
     X = E1 + D2l
     giu = np.einsum('ujij->ui', 2*X - X.transpose(0,1,3,2),optimize=EINSUMOPT)
-    if pr:
-        print('E1')
-        printtensor(E1)
-        print('\n D2p')
-        printtensor(D2l)
-        print('\nGiu')
-        printmatrix(giu)
     
     X = Fs1 - Ds2l
     gap = np.einsum('abpb->ap', 2*X - X.transpose(1,0,2,3),optimize=EINSUMOPT)
@@ -171,7 +164,7 @@ water = psi4.geometry("""
 
 # Basis set
 
-basis = 'sto-3g'
+basis = 'cc-pvtz'
 
 # Psi4 Options
 
@@ -263,39 +256,36 @@ print('MP2 Energy: {:<5.10f}     Time required: {:.5f}'.format(E+scf_e, time.tim
 
 r1 = 0
 r2 = 1
-CC_CONV = 7
+CC_CONV = 8
 CC_MAXITER = 30
     
 LIM = 10**(-CC_CONV)
 
 ite = 0
 
-T1, T2, r1, r2 = CCSD_Iter(T1, T2, pr = True)
+while r2 > LIM or r1 > LIM:
+    ite += 1
+    if ite > CC_MAXITER:
+        raise NameError("CC Equations did not converge in {} iterations".format(CC_MAXITER))
+    Eold = E
+    t = time.time()
+    T1, T2, r1, r2 = CCSD_Iter(T1, T2)
+    E = cc_energy(T1, T2)
+    dE = E - Eold
+    print('-'*50)
+    print("Iteration {}".format(ite))
+    print("CC Correlation energy: {}".format(E))
+    print("Energy change:         {}".format(dE))
+    print("T1 Residue:            {}".format(r1))
+    print("T2 Residue:            {}".format(r2))
+    print("Max T1 Amplitude:      {}".format(np.max(T1)))
+    print("Max T2 Amplitude:      {}".format(np.max(T2)))
+    print("Time required:         {}".format(time.time() - t))
+    print('-'*50)
 
-
-#while r2 > LIM or r1 > LIM:
-#    ite += 1
-#    if ite > CC_MAXITER:
-#        raise NameError("CC Equations did not converge in {} iterations".format(CC_MAXITER))
-#    Eold = E
-#    t = time.time()
-#    T1, T2, r1, r2 = CCSD_Iter(T1, T2)
-#    E = cc_energy(T1, T2)
-#    dE = E - Eold
-#    print('-'*50)
-#    print("Iteration {}".format(ite))
-#    print("CC Correlation energy: {}".format(E))
-#    print("Energy change:         {}".format(dE))
-#    print("T1 Residue:            {}".format(r1))
-#    print("T2 Residue:            {}".format(r2))
-#    print("Max T1 Amplitude:      {}".format(np.max(T1)))
-#    print("Max T2 Amplitude:      {}".format(np.max(T2)))
-#    print("Time required:         {}".format(time.time() - t))
-#    print('-'*50)
-#
-#print("\nCC Equations Converged!!!")
-#print("Final CCSD Energy:     {:<5.10f}".format(E + scf_e))
-#print('CCSD Energy from Psi4: {:<5.10f}'.format(p4_ccsd))
-#print("Total Computation time:        {}".format(time.time() - tinit))
+print("\nCC Equations Converged!!!")
+print("Final CCSD Energy:     {:<5.10f}".format(E + scf_e))
+print('CCSD Energy from Psi4: {:<5.10f}'.format(p4_ccsd))
+print("Total Computation time:        {}".format(time.time() - tinit))
 
 

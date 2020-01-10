@@ -1,6 +1,7 @@
 import sys
 sys.path.append('Modules/')
 from CASCCSD import CASCCSD
+from TCCSD import TCCSD
 
 molecule mol {
     0 1
@@ -24,7 +25,8 @@ set {
 }
 
 e, wfn = energy('detci', return_wfn=True)
-X = CASCCSD(wfn)
+X = TCCSD(wfn)
 
-print('CAS energy: {:<5.10f}'.format(e))
-print('CC  energy: {:<5.10f}'.format(X.Ecc))
+print('CAS energy:   {:<5.10f}'.format(e))
+print('ecCC  energy: {:<5.10f}'.format(X.Ecc))
+print('CCSD  energy: {:<5.10f}'.format(energy('ccsd')))

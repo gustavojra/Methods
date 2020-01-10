@@ -1,6 +1,7 @@
 import sys
 sys.path.append('../Modules/')
 from CASCCSD import CASCCSD
+from TCCSD import TCCSD
 
 molecule mol {
     unit bohr
@@ -22,8 +23,8 @@ set {
     FCI True
 }
 
-set FROZEN_DOCC = [5]
-set ACTIVE = [3]
+set FROZEN_DOCC = [2]
+set ACTIVE = [10]
 
 e, wfn = energy('detci', return_wfn=True)
-X = CASCCSD(wfn)
+X = TCCSD(wfn)

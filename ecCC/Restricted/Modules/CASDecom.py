@@ -62,9 +62,11 @@ def CASDecom(Ccas, determinants, ref, fdocc = 0, fvir = 0, return_t3 = True, ret
 
     T1 = np.zeros([ndocc, nvir])
     T2 = np.zeros([ndocc, ndocc, nvir, nvir])
-    T3 = np.zeros([ndocc, ndocc, ndocc, nvir, nvir, nvir])
-    T4abaa = np.zeros([ndocc, ndocc, ndocc, ndocc, nvir, nvir, nvir, nvir])
-    T4abab = np.zeros([ndocc, ndocc, ndocc, ndocc, nvir, nvir, nvir, nvir])
+    if return_t3:
+        T3 = np.zeros([ndocc, ndocc, ndocc, nvir, nvir, nvir])
+    if return_t4:
+        T4abaa = np.zeros([ndocc, ndocc, ndocc, ndocc, nvir, nvir, nvir, nvir])
+        T4abab = np.zeros([ndocc, ndocc, ndocc, ndocc, nvir, nvir, nvir, nvir])
 
     # Runs through the determinants to classify them by excitation rank. Collect CI coefficient and excitation indexes.
 

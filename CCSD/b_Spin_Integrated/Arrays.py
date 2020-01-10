@@ -17,12 +17,18 @@ np.set_printoptions(suppress=True)
 def printtensor(T):
     dims = np.shape(T)
     rank = len(dims)
-    i_range = range(0,dims[0])
-    j_range = range(0,dims[1])
-    for i in i_range:
-        for j in j_range:
-            print('Page ({},{},*,*)\n'.format(i,j))
-            printmatrix(T[i,j,:,:])
+    if rank == 4:
+        i_range = range(0,dims[0])
+        j_range = range(0,dims[1])
+        for i in i_range:
+            for j in j_range:
+                print('Page ({},{},*,*)\n'.format(i,j))
+                printmatrix(T[i,j,:,:])
+    if rank == 3:
+        i_range = range(0,dims[0])
+        for i in i_range:
+            print('Page ({},*,*)\n'.format(i))
+            printmatrix(T[i,:,:])
 
 def printmatrix(M):
     dims = np.shape(M)
@@ -37,7 +43,7 @@ def printmatrix(M):
     for i in i_range:
         out += '{:3d}  '.format(i)
         for j in j_range:
-            out += '{:< 10.8f}    '.format(M[i,j])
+            out += '{:< 9.7f}    '.format(M[i,j])
         out += '\n'
     print(out)
 
@@ -261,16 +267,67 @@ E = cc_energy(T1, T2)
 print('MP2 Energy: {:<5.10f}     Time required: {:.5f}'.format(E+scf_e, time.time()-t))
 
 tau = T2 + np.einsum('ia,jb->ijab', T1, T1)
-E1  = np.einsum('uaij,va->uvij', Vint[o,v,o,o], T1)
-D2l = np.einsum('abij,uvab->uvij',Vint[v,v,o,o], tau)
+Te = 0.5*T2 + np.einsum('ia,jb->ijab', T1, T1,optimize='optimal')
+
+A2l = np.einsum('uvij,ijpg->uvpg', Vint[o,o,o,o], tau,optimize='optimal')
+B2l = np.einsum('abpg,uvab->uvpg', Vint[v,v,v,v], tau,optimize='optimal')
+C1  = np.einsum('uaip,ia->uip', Vint[o,v,o,v], T1,optimize='optimal') 
+C2  = np.einsum('aupi,viga->pvug', Vint[v,o,v,o], T2,optimize='optimal')
+C2l = np.einsum('iaug,ivpa->pvug', Vint[o,v,o,v], tau,optimize='optimal')
+D1  = np.einsum('uapi,va->uvpi', Vint[o,v,v,o], T1,optimize='optimal')
+D2l = np.einsum('abij,uvab->uvij',Vint[v,v,o,o], tau,optimize='optimal')
+Ds2l= np.einsum('acij,ijpb->acpb',Vint[v,v,o,o], tau,optimize='optimal')
+D2a = np.einsum('baji,vjgb->avig', Vint[v,v,o,o], 2*T2 - T2.transpose(0,1,3,2),optimize='optimal')
+D2b = np.einsum('baij,vjgb->avig', Vint[v,v,o,o], T2,optimize='optimal')
+D2c = np.einsum('baij,vjbg->avig', Vint[v,v,o,o], T2,optimize='optimal')
+Es1 = np.einsum('uvpi,ig->uvpg', Vint[o,o,v,o], T1,optimize='optimal')
+E1  = np.einsum('uaij,va->uvij', Vint[o,v,o,o], T1,optimize='optimal')
+E2a = np.einsum('buji,vjgb->uvig', Vint[v,o,o,o], 2*T2 - T2.transpose(0,1,3,2),optimize='optimal')
+E2b = np.einsum('buij,vjgb->uvig', Vint[v,o,o,o], T2,optimize='optimal')
+E2c = np.einsum('buij,vjbg->uvig', Vint[v,o,o,o], T2,optimize='optimal')
+F11 = np.einsum('bapi,va->bvpi', Vint[v,v,v,o], T1,optimize='optimal')
+F12 = np.einsum('baip,va->bvip', Vint[v,v,o,v], T1,optimize='optimal')
+Fs1 = np.einsum('acpi,ib->acpb', Vint[v,v,v,o], T1,optimize='optimal')
+F2a = np.einsum('abpi,uiab->aup', Vint[v,v,v,o], 2*T2 - T2.transpose(0,1,3,2),optimize='optimal') 
+F2l = np.einsum('abpi,uvab->uvpi', Vint[v,v,v,o], tau,optimize='optimal')
+
 X = E1 + D2l
 X = 2*X - X.transpose(0,1,3,2)
 giu = np.einsum('ujij->ui', X)
 
 
-F1s = np.einsum('acpi,ib->acpb', Vint[v,v,v,o], T1)
-D2ps= np.einsum('acij,ijpb->acpb',Vint[v,v,o,o], tau)
-Y = F1s - D2ps
+Y = Fs1 - Ds2l
 X = 2*Y - Y.transpose(1,0,2,3) 
 gap = np.einsum('abpb->ap', X)
-printmatrix(gap)
+
+J = np.einsum('ag,uvpa->uvpg', gap, T2,optimize='optimal') - np.einsum('vi,uipg->uvpg', giu, T2,optimize='optimal')
+S = 0.5*A2l + 0.5*B2l - Es1 - (C2 + C2l - D2a - F12).transpose(2,1,0,3)  
+X = D2a - D2b
+Y = T2 - Te.transpose(0,1,3,2)
+S += np.einsum('avig,uipa->uvpg', X, Y,optimize='optimal')
+S += 0.5*np.einsum('avig,uipa->uvpg', D2c, T2,optimize='optimal')
+S += np.einsum('auig,viap->uvpg', D2c, Te,optimize='optimal')
+S += np.einsum('uvij,ijpg->uvpg', 0.5*D2l + E1, tau,optimize='optimal')
+S -= np.einsum('uvpi,ig->uvpg', D1 + F2l, T1,optimize='optimal')
+S -= np.einsum('uvig,ip->uvpg',E2a - E2b - E2c.transpose(1,0,2,3), T1,optimize='optimal')
+S -= np.einsum('avgi,uipa->uvpg', F11, T2,optimize='optimal')
+S -= np.einsum('avpi,uiag->uvpg', F11, T2,optimize='optimal')
+S += np.einsum('avig,uipa->uvpg', F12, 2*T2 - T2.transpose(0,1,3,2),optimize='optimal')
+
+T2new = Vint[o,o,v,v] + J + J.transpose(1,0,3,2) + S + S.transpose(1,0,3,2)
+T2new = np.einsum('uvpg,uvpg->uvpg', T2new, D)
+
+T1new = np.einsum('ui,ip->up', giu, T1,optimize='optimal')
+T1new -= np.einsum('ap,ua->up', gap, T1,optimize='optimal')
+T1new -= np.einsum('juai,ja,ip->up', 2*D1 - D1.transpose(3,1,2,0), T1, T1,optimize='optimal')
+T1new -= np.einsum('auip,ia->up', 2*(D2a - D2b) + D2c, T1,optimize='optimal')
+T1new -= np.einsum('aup->up', F2a,optimize='optimal')
+X = 0.5*(E2a - E2b) + E2c
+T1new += np.einsum('uiip->up', X,optimize='optimal')
+T1new += np.einsum('uip->up', C1,optimize='optimal')
+T1new -= 2*np.einsum('uipi->up', D1,optimize='optimal')
+T1new = np.einsum('up,up->up', T1new, d,optimize='optimal')
+
+Ecc = cc_energy(T1new, T2new)
+r2 = np.sqrt(np.sum(np.square(T2new - T2)))/100
+print(r2)
