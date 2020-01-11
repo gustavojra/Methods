@@ -24,7 +24,7 @@ def printout(x):
 
 class CASCCSD:
 
-    def __init__(self, wfn, CC_CONV=6, CC_MAXITER=50, E_CONV = 8, MP2_GUESS=False, RELAX_T3T1=True, read_amp=False, write_amp=False):
+    def __init__(self, wfn, CC_CONV=6, CC_MAXITER=50, E_CONV = 8, MP2_GUESS=False, RELAX_T3T1=True, read_amp=False, write_amp=False, fcore=False):
 
         # Collect data from CI wavefunction
 
@@ -43,6 +43,7 @@ class CASCCSD:
         self.fvir = sum(wfn.frzvpi())
         self.read_amp = read_amp
         self.write_amp = write_amp
+        self.fcore = fcore
         
         printout(\
         """---------------------------------------------------------
@@ -147,9 +148,7 @@ class CASCCSD:
 
         T2new = np.einsum('uvpg,uvpg->uvpg', T2new, self.D,optimize=EINSUMOPT)
 
-        ## Compute RMS T2
 
-        self.r2 = np.sum(np.sqrt(np.square(T2new - self.T2)))/((self.nvir*self.ndocc)**2)
     
         ## Get T1 new
         
@@ -164,10 +163,16 @@ class CASCCSD:
         T1new += self.T3onT1
     
         T1new = np.einsum('up,up->up', T1new, self.d, optimize=EINSUMOPT)
+
+        # DUMB FROZEN CORE
+        if self.fcore:
+            self.dumb_fc(T1new, T2new)
         
-        ## Compute RMS T1
+        ## Compute RESIDUES
 
         self.r1 = np.sum(np.sqrt(np.square(T1new - self.T1)))/(self.nvir*self.ndocc)
+
+        self.r2 = np.sum(np.sqrt(np.square(T2new - self.T2)))/((self.nvir*self.ndocc)**2)
     
         ## Update amplitudes
 
@@ -204,6 +209,11 @@ class CASCCSD:
                 
         # Apply permutation
         self.T3onT2sec += np.einsum('ijab -> jiba', self.T3onT2sec)
+
+    def dumb_fc(self, T1, T2):
+        f = slice(0,self.fcore) 
+        T1[f] = 0.0
+        T2[f,f] = 0.0
 
     def compute(self, CC_CONV=6, CC_MAXITER=50, E_CONV = 8, MP2_GUESS=False, RELAX_T3T1=True):
 
@@ -329,6 +339,10 @@ class CASCCSD:
         LIM = 10**(-CC_CONV)
         ELIM = 10**(-E_CONV)
         ite = 0
+
+        if self.fcore:
+            printout('\n Applying DUMBFC...')
+            self.dumb_fc(self.T1, self.T2)
 
         printout('\n Starting CCSD Iterations')
         printout('='*36)

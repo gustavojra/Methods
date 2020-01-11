@@ -1,0 +1,572 @@
+
+    -----------------------------------------------------------------------
+          Psi4: An Open-Source Ab Initio Electronic Structure Package
+                               Psi4 1.4a1.dev163 
+
+                         Git: Rev {master} dd6b45b dirty
+
+
+    R. M. Parrish, L. A. Burns, D. G. A. Smith, A. C. Simmonett,
+    A. E. DePrince III, E. G. Hohenstein, U. Bozkaya, A. Yu. Sokolov,
+    R. Di Remigio, R. M. Richard, J. F. Gonthier, A. M. James,
+    H. R. McAlexander, A. Kumar, M. Saitow, X. Wang, B. P. Pritchard,
+    P. Verma, H. F. Schaefer III, K. Patkowski, R. A. King, E. F. Valeev,
+    F. A. Evangelista, J. M. Turney, T. D. Crawford, and C. D. Sherrill,
+    J. Chem. Theory Comput. 13(7) pp 3185--3197 (2017).
+    (doi: 10.1021/acs.jctc.7b00174)
+
+
+                         Additional Contributions by
+    P. Kraus, H. Kruse, M. H. Lechner, M. C. Schieber, R. A. Shaw,
+    A. Alenaizan, R. Galvelis, Z. L. Glick, S. Lehtola, and J. P. Misiewicz
+
+    -----------------------------------------------------------------------
+
+
+    Psi4 started on: Saturday, 11 January 2020 04:24PM
+
+    Process ID: 21591
+    Host:       n045
+    PSIDATADIR: /opt/psi/4/master/share/psi4
+    Memory:     500.0 MiB
+    Threads:    4
+    
+  ==> Input File <==
+
+--------------------------------------------------------------------------
+import sys
+sys.path.append('../Modules/')
+from CASCCSD import CASCCSD
+from TCCSD import TCCSD
+from printtensor import *
+from save_amp import *
+
+molecule mol {
+    0 1
+    O
+    H 1 0.96
+    H 1 0.96 2 104.5
+    symmetry c1
+}
+
+set {
+    BASIS         sto-3g
+    REFERENCE     RHF
+    SCF_TYPE      PK
+    SOSCF         True
+    E_CONVERGENCE 8
+    MAXITER       100
+    MAX_ATTEMPTS  10
+    GUESS         READ
+    NUM_DETS_PRINT 100000
+    FCI           True
+    FROZEN_DOCC = [0]
+    DETCI_FREEZE_CORE False
+}
+
+e, wfn = energy('detci', return_wfn=True)
+X = CASCCSD(wfn)
+
+print_out('\nCAS energy:      {:<5.10f}\n'.format(e))
+#print_out('TCCSD    energy: {:<5.10f}\n'.format(Y.Ecc))
+print_out('CASCCSD  energy: {:<5.10f}\n'.format(X.Ecc))
+--------------------------------------------------------------------------
+
+*** tstart() called on n045
+*** at Sat Jan 11 16:24:00 2020
+
+   => Loading Basis Set <=
+
+    Name: STO-3G
+    Role: ORBITAL
+    Keyword: BASIS
+    atoms 1   entry O          line    81 file /opt/psi/4/master/share/psi4/basis/sto-3g.gbs 
+    atoms 2-3 entry H          line    19 file /opt/psi/4/master/share/psi4/basis/sto-3g.gbs 
+
+
+         ---------------------------------------------------------
+                                   SCF
+               by Justin Turney, Rob Parrish, Andy Simmonett
+                          and Daniel G. A. Smith
+                              RHF Reference
+                        4 Threads,    500 MiB Core
+         ---------------------------------------------------------
+
+  ==> Geometry <==
+
+    Molecular point group: c1
+    Full point group: C2v
+
+    Geometry (in Angstrom), charge = 0, multiplicity = 1:
+
+       Center              X                  Y                   Z               Mass       
+    ------------   -----------------  -----------------  -----------------  -----------------
+         O            0.000000000000     0.000000000000    -0.065775570547    15.994914619570
+         H            0.000000000000    -0.759061990794     0.521953018286     1.007825032230
+         H            0.000000000000     0.759061990794     0.521953018286     1.007825032230
+
+  Running in c1 symmetry.
+
+  Rotational constants: A =     27.26297  B =     14.51533  C =      9.47217 [cm^-1]
+  Rotational constants: A = 817323.21126  B = 435158.60141  C = 283968.37536 [MHz]
+  Nuclear repulsion =    9.168193296424347
+
+  Charge       = 0
+  Multiplicity = 1
+  Electrons    = 10
+  Nalpha       = 5
+  Nbeta        = 5
+
+  ==> Algorithm <==
+
+  SCF Algorithm Type is PK.
+  DIIS enabled.
+  MOM disabled.
+  Fractional occupation disabled.
+  Guess Type is READ.
+  Energy threshold   = 1.00e-08
+  Density threshold  = 1.00e-08
+  Integral threshold = 0.00e+00
+
+  ==> Primary Basis <==
+
+  Basis Set: STO-3G
+    Blend: STO-3G
+    Number of shells: 5
+    Number of basis function: 7
+    Number of Cartesian functions: 7
+    Spherical Harmonics?: true
+    Max angular momentum: 1
+
+  Unable to find file 180, defaulting to SAD guess.
+  ==> Pre-Iterations <==
+
+   -------------------------------------------------------
+    Irrep   Nso     Nmo     Nalpha   Nbeta   Ndocc  Nsocc
+   -------------------------------------------------------
+     A          7       7       0       0       0       0
+   -------------------------------------------------------
+    Total       7       7       5       5       5       0
+   -------------------------------------------------------
+
+  ==> Integral Setup <==
+
+  Using in-core PK algorithm.
+   Calculation information:
+      Number of atoms:                   3
+      Number of AO shells:               5
+      Number of primitives:             15
+      Number of atomic orbitals:         7
+      Number of basis functions:         7
+
+      Integral cutoff                 1.00e-12
+      Number of threads:                 4
+
+  Performing in-core PK
+  Using 812 doubles for integral storage.
+  We computed 187 shell quartets total.
+  Whereas there are 120 unique shell quartets.
+    55.83 percent of shell quartets recomputed by reordering.
+
+  ==> DiskJK: Disk-Based J/K Matrices <==
+
+    J tasked:                  Yes
+    K tasked:                  Yes
+    wK tasked:                  No
+    Memory [MiB]:              375
+    Schwarz Cutoff:          1E-12
+
+    OpenMP threads:              4
+
+  Minimum eigenvalue in the overlap matrix is 3.4405295587E-01.
+  Using Symmetric Orthogonalization.
+
+  SCF Guess: Superposition of Atomic Densities via on-the-fly atomic UHF.
+
+  ==> Iterations <==
+
+                        Total Energy        Delta E     RMS |[F,P]|
+
+   @RHF iter SAD:   -74.21537398209611   -7.42154e+01   0.00000e+00 
+   @RHF iter   1:   -74.91366296103661   -6.98289e-01   3.55485e-02 DIIS
+   @RHF iter   2:   -74.96238874718443   -4.87258e-02   5.38242e-03 DIIS
+   @RHF iter   3:   -74.96324890557841   -8.60158e-04   1.27028e-03 SOSCF, nmicro=4
+   @RHF iter   4:   -74.96331905217622   -7.01466e-05   2.87848e-06 SOSCF, nmicro=5
+   @RHF iter   5:   -74.96331905260070   -4.24478e-10   2.15637e-11 SOSCF, nmicro=conv
+  Energy and wave function converged.
+
+
+  ==> Post-Iterations <==
+
+    Orbital Energies [Eh]
+    ---------------------
+
+    Doubly Occupied:                                                      
+
+       1A    -20.242099     2A     -1.266998     3A     -0.616423  
+       4A     -0.452703     5A     -0.391074  
+
+    Virtual:                                                              
+
+       6A      0.602918     7A      0.739017  
+
+    Final Occupation by Irrep:
+              A 
+    DOCC [     5 ]
+
+  @RHF Final Energy:   -74.96331905260070
+
+   => Energetics <=
+
+    Nuclear Repulsion Energy =              9.1681932964243469
+    One-Electron Energy =                -122.3244302898456795
+    Two-Electron Energy =                  38.1929179408206423
+    Total Energy =                        -74.9633190526006956
+
+Computation Completed
+
+
+Properties will be evaluated at   0.000000,   0.000000,   0.000000 [a0]
+
+Properties computed using the SCF density matrix
+
+  Nuclear Dipole Moment: [e a0]
+     X:     0.0000      Y:     0.0000      Z:     0.9783
+
+  Electronic Dipole Moment: [e a0]
+     X:    -0.0000      Y:     0.0000      Z:    -0.3007
+
+  Dipole Moment: [e a0]
+     X:    -0.0000      Y:     0.0000      Z:     0.6776     Total:     0.6776
+
+  Dipole Moment: [D]
+     X:    -0.0000      Y:     0.0000      Z:     1.7223     Total:     1.7223
+
+
+*** tstop() called on n045 at Sat Jan 11 16:24:01 2020
+Module time:
+	user time   =       2.56 seconds =       0.04 minutes
+	system time =       0.00 seconds =       0.00 minutes
+	total time  =          1 seconds =       0.02 minutes
+Total time:
+	user time   =       2.56 seconds =       0.04 minutes
+	system time =       0.00 seconds =       0.00 minutes
+	total time  =          1 seconds =       0.02 minutes
+ MINTS: Wrapper to libmints.
+   by Justin Turney
+
+   Calculation information:
+      Number of threads:                 4
+      Number of atoms:                   3
+      Number of AO shells:               5
+      Number of SO shells:               5
+      Number of primitives:             15
+      Number of atomic orbitals:         7
+      Number of basis functions:         7
+
+      Number of irreps:                  1
+      Integral cutoff                 0.00e+00
+      Number of functions per irrep: [   7 ]
+
+ OEINTS: Overlap, kinetic, potential, dipole, and quadrupole integrals
+         stored in file 35.
+
+      Computing two-electron integrals...done
+      Computed 231 non-zero two-electron integrals.
+        Stored in file 33.
+
+
+         ---------------------------------------------------------
+                          Configuration Interaction
+                            (a 'D E T C I' module)
+
+                 C. David Sherrill, Daniel G. A. Smith, and
+                              Matt L. Leininger
+         ---------------------------------------------------------
+
+
+   ==> Parameters <==
+
+    EX LEVEL       =       10      H0 BLOCKSIZE  =     1000
+    VAL EX LEVEL   =        0      H0 GUESS SIZE =     1000
+    H0COUPLINGSIZE =        0      H0 COUPLING   =       NO
+    MAXITER        =       24      NUM PRINT     =   100000
+    NUM ROOTS      =        1      ICORE         =        1
+    PRINT LVL      =        1      FCI           =      YES
+    R CONV         = 1.00e-04      MIXED         =      YES
+    E CONV         = 1.00e-08      MIXED4        =      YES
+    R4S            =       NO      REPL OTF      =       NO
+    DIAG METHOD    =      SEM      FOLLOW ROOT   =        0
+    PRECONDITIONER = DAVIDSON      UPDATE        = DAVIDSON
+    S              =   0.0000      Ms0           =      YES
+    GUESS VECTOR   =  H0BLOCK      OPENTYPE      =     NONE
+    COLLAPSE SIZE  =        1      HD AVG        = EVANGELISTI
+    MAX NUM VECS   =       25      REF SYM       =     AUTO
+    IOPEN        =       NO
+
+    EX ALLOW       =  1  1  1  1  1  1  1  1  1  1 
+    STATE AVERAGE  =  0(1.00) 
+
+   ==> CI Orbital and Space information <==
+
+   ------------------------------------
+               Space    Total     A
+   ------------------------------------
+                 Nso        7     7
+                 Nmo        7     7
+               Ndocc        5     5
+               Nsocc        0     0
+   ------------------------------------
+              CI Spaces
+   ------------------------------------
+        Dropped DOCC        0     0
+              Active        7     7
+        Dropped UOCC        0     0
+   ------------------------------------
+
+   ==> Setting up CI strings <==
+
+    There are 21 alpha and 21 beta strings
+    The CI space requires 441 (4.41E+02) determinants and 1 blocks
+
+   ==> Transforming CI integrals <==
+
+	Presorting SO-basis two-electron integrals.
+	Sorting File: SO Ints (nn|nn) nbuckets = 1
+	Transforming the one-electron integrals and constructing Fock matrices
+	Starting first half-transformation.
+	Sorting half-transformed integrals.
+	First half integral transformation complete.
+	Starting second half-transformation.
+	Two-electron integral transformation complete.
+
+   ==> Starting CI iterations <==
+
+    H0 Block Eigenvalue = -75.01315470
+
+    Simultaneous Expansion Method (Block Davidson Method)
+    Using 1 initial trial vectors
+
+     Iter   Root       Total Energy       Delta E      C RMS
+
+   @CI  0:     0    -75.013154701624   -8.4181E+01   1.3861E-13  
+    Warning: Norm of correction (root 0) is < 1.0E-13
+   @CI  1:     0    -75.013154701624   0.0000E+00   4.1452E-13 c
+
+   ==> Energetics <==
+
+    SCF energy =          -74.963319052600696
+    Total CI energy =     -75.013154701624060
+
+   ==> DETCI root 0 information <==
+
+    DETCI Root 0 energy =   -75.013154701624060
+
+   The 441 most important determinants:
+
+    *   1   -0.986561  (    0,    0)  1AX 2AX 3AX 4AX 5AX 
+    *   2    0.077318  (    8,    8)  1AX 2AX 4AX 5AX 7AX 
+    *   3    0.047001  (    2,    8)  1AX 2AX 3AA 4AB 5AX 6AA 7AB 
+    *   4    0.047001  (    8,    2)  1AX 2AX 3AB 4AA 5AX 6AB 7AA 
+    *   5    0.046141  (    2,    2)  1AX 2AX 3AX 5AX 6AX 
+    *   6    0.043420  (    3,    3)  1AX 2AX 4AX 5AX 6AX 
+    *   7    0.041524  (    7,    7)  1AX 2AX 3AX 5AX 7AX 
+    *   8    0.034506  (    3,    7)  1AX 2AX 3AB 4AA 5AX 6AA 7AB 
+    *   9    0.034506  (    7,    3)  1AX 2AX 3AA 4AB 5AX 6AB 7AA 
+    *  10   -0.033087  (    2,    4)  1AX 2AA 3AX 4AB 5AX 6AX 
+    *  11   -0.033087  (    4,    2)  1AX 2AB 3AX 4AA 5AX 6AX 
+    *  12    0.031787  (    4,    4)  1AX 3AX 4AX 5AX 6AX 
+    *  13   -0.031123  (    4,    8)  1AX 2AB 3AA 4AX 5AX 6AA 7AB 
+    *  14   -0.031123  (    8,    4)  1AX 2AA 3AB 4AX 5AX 6AB 7AA 
+    *  15    0.026719  (    1,    1)  1AX 2AX 3AX 4AX 6AX 
+    *  16   -0.020336  (    3,    9)  1AX 2AA 3AB 4AX 5AX 6AA 7AB 
+    *  17   -0.020336  (    9,    3)  1AX 2AB 3AA 4AX 5AX 6AB 7AA 
+    *  18    0.016515  (    9,    9)  1AX 3AX 4AX 5AX 7AX 
+    *  19    0.012670  (    0,    2)  1AX 2AX 3AX 4AA 5AX 6AB 
+    *  20    0.012670  (    2,    0)  1AX 2AX 3AX 4AB 5AX 6AA 
+    *  21    0.012495  (    0,   15)  1AX 2AX 3AA 4AA 5AX 6AB 7AB 
+    *  22    0.012495  (   15,    0)  1AX 2AX 3AB 4AB 5AX 6AA 7AA 
+    *  23    0.010787  (    0,   18)  1AX 2AA 3AA 4AX 5AX 6AB 7AB 
+    *  24    0.010787  (   18,    0)  1AX 2AB 3AB 4AX 5AX 6AA 7AA 
+    *  25    0.010174  (    6,    6)  1AX 2AX 3AX 4AX 7AX 
+    *  26   -0.009489  (   15,   15)  1AX 2AX 5AX 6AX 7AX 
+    *  27   -0.005096  (   18,   18)  1AX 4AX 5AX 6AX 7AX 
+    *  28   -0.004977  (   15,   18)  1AX 2AA 4AB 5AX 6AX 7AX 
+    *  29   -0.004977  (   18,   15)  1AX 2AB 4AA 5AX 6AX 7AX 
+    *  30    0.003779  (    7,    9)  1AX 2AA 3AX 4AB 5AX 7AX 
+    *  31    0.003779  (    9,    7)  1AX 2AB 3AX 4AA 5AX 7AX 
+    *  32    0.002995  (    0,    8)  1AX 2AX 3AA 4AX 5AX 7AB 
+    *  33    0.002995  (    8,    0)  1AX 2AX 3AB 4AX 5AX 7AA 
+    *  34    0.002631  (    1,   12)  1AX 2AX 3AA 4AX 6AX 7AB 
+    *  35    0.002631  (   12,    1)  1AX 2AX 3AB 4AX 6AX 7AA 
+    *  36   -0.002279  (   12,   12)  1AX 2AX 4AX 6AX 7AX 
+    *  37   -0.002135  (   16,   16)  1AX 3AX 5AX 6AX 7AX 
+    *  38    0.001731  (    7,   16)  1AX 2AA 3AX 5AX 6AB 7AX 
+    *  39    0.001731  (   16,    7)  1AX 2AB 3AX 5AX 6AA 7AX 
+    *  40   -0.001682  (    8,   15)  1AX 2AX 4AA 5AX 6AB 7AX 
+    *  41   -0.001682  (   15,    8)  1AX 2AX 4AB 5AX 6AA 7AX 
+    *  42   -0.001436  (   11,   11)  1AX 2AX 3AX 6AX 7AX 
+    *  43   -0.001149  (    4,   15)  1AX 2AB 3AA 4AA 5AX 6AX 7AB 
+    *  44   -0.001149  (   15,    4)  1AX 2AA 3AB 4AB 5AX 6AX 7AA 
+    *  45    0.001103  (    2,   18)  1AX 2AA 3AA 4AB 5AX 6AX 7AB 
+    *  46    0.001103  (   18,    2)  1AX 2AB 3AB 4AA 5AX 6AX 7AA 
+    *  47    0.000996  (    9,   16)  1AX 3AX 4AA 5AX 6AB 7AX 
+    *  48    0.000996  (   16,    9)  1AX 3AX 4AB 5AX 6AA 7AX 
+    *  49   -0.000743  (   13,   13)  1AX 3AX 4AX 6AX 7AX 
+    *  50    0.000723  (    9,   10)  1AA 2AB 3AX 4AX 5AX 7AX 
+    *  51    0.000723  (   10,    9)  1AB 2AA 3AX 4AX 5AX 7AX 
+    *  52    0.000640  (    5,    5)  2AX 3AX 4AX 5AX 6AX 
+    *  53    0.000509  (    7,   10)  1AA 2AX 3AX 4AB 5AX 7AX 
+    *  54    0.000509  (   10,    7)  1AB 2AX 3AX 4AA 5AX 7AX 
+    *  55    0.000475  (    2,   15)  1AX 2AX 3AA 5AX 6AX 7AB 
+    *  56    0.000475  (   15,    2)  1AX 2AX 3AB 5AX 6AX 7AA 
+    *  57   -0.000473  (    0,   19)  1AA 2AX 3AA 4AX 5AX 6AB 7AB 
+    *  58   -0.000473  (   19,    0)  1AB 2AX 3AB 4AX 5AX 6AA 7AA 
+    *  59    0.000419  (   10,   10)  2AX 3AX 4AX 5AX 7AX 
+    *  60    0.000340  (   11,   13)  1AX 2AA 3AX 4AB 6AX 7AX 
+    *  61    0.000340  (   13,   11)  1AX 2AB 3AX 4AA 6AX 7AX 
+    *  62    0.000281  (    4,    5)  1AA 2AB 3AX 4AX 5AX 6AX 
+    *  63    0.000281  (    5,    4)  1AB 2AA 3AX 4AX 5AX 6AX 
+    *  64    0.000241  (    5,    8)  1AB 2AX 3AA 4AX 5AX 6AA 7AB 
+    *  65    0.000241  (    8,    5)  1AA 2AX 3AB 4AX 5AX 6AB 7AA 
+    *  66   -0.000232  (    3,   10)  1AA 2AX 3AB 4AX 5AX 6AA 7AB 
+    *  67   -0.000232  (   10,    3)  1AB 2AX 3AA 4AX 5AX 6AB 7AA 
+    *  68   -0.000162  (    8,   18)  1AX 2AA 4AX 5AX 6AB 7AX 
+    *  69   -0.000162  (   18,    8)  1AX 2AB 4AX 5AX 6AA 7AX 
+    *  70   -0.000130  (    4,   18)  1AX 3AA 4AX 5AX 6AX 7AB 
+    *  71   -0.000130  (   18,    4)  1AX 3AB 4AX 5AX 6AX 7AA 
+    *  72   -0.000116  (    2,    5)  1AA 2AX 3AX 4AB 5AX 6AX 
+    *  73   -0.000116  (    5,    2)  1AB 2AX 3AX 4AA 5AX 6AX 
+    *  74    0.000116  (    6,   13)  1AX 2AA 3AX 4AX 6AB 7AX 
+    *  75    0.000116  (   13,    6)  1AX 2AB 3AX 4AX 6AA 7AX 
+    *  76   -0.000078  (    6,   11)  1AX 2AX 3AX 4AA 6AB 7AX 
+    *  77   -0.000078  (   11,    6)  1AX 2AX 3AX 4AB 6AA 7AX 
+    *  78   -0.000069  (   19,   19)  2AX 4AX 5AX 6AX 7AX 
+    *  79   -0.000064  (   16,   17)  1AA 2AB 3AX 5AX 6AX 7AX 
+    *  80   -0.000064  (   17,   16)  1AB 2AA 3AX 5AX 6AX 7AX 
+    *  81   -0.000046  (    3,   16)  1AX 2AA 3AB 4AA 5AX 6AX 7AB 
+    *  82   -0.000046  (   16,    3)  1AX 2AB 3AA 4AB 5AX 6AX 7AA 
+    *  83   -0.000043  (   17,   17)  2AX 3AX 5AX 6AX 7AX 
+    *  84   -0.000042  (   18,   19)  1AA 2AB 4AX 5AX 6AX 7AX 
+    *  85   -0.000042  (   19,   18)  1AB 2AA 4AX 5AX 6AX 7AX 
+    *  86    0.000035  (   16,   20)  1AA 3AX 4AB 5AX 6AX 7AX 
+    *  87    0.000035  (   20,   16)  1AB 3AX 4AA 5AX 6AX 7AX 
+    *  88   -0.000033  (    7,   20)  1AA 2AA 3AX 4AB 5AX 6AB 7AX 
+    *  89   -0.000033  (   20,    7)  1AB 2AB 3AX 4AA 5AX 6AA 7AX 
+    *  90   -0.000031  (    0,    5)  1AA 2AX 3AX 4AX 5AX 6AB 
+    *  91   -0.000031  (    5,    0)  1AB 2AX 3AX 4AX 5AX 6AA 
+    *  92    0.000027  (    8,   19)  1AA 2AX 4AX 5AX 6AB 7AX 
+    *  93    0.000027  (   19,    8)  1AB 2AX 4AX 5AX 6AA 7AX 
+    *  94    0.000025  (   15,   19)  1AA 2AX 4AB 5AX 6AX 7AX 
+    *  95    0.000025  (   19,   15)  1AB 2AX 4AA 5AX 6AX 7AX 
+    *  96   -0.000025  (    5,   19)  2AX 3AA 4AX 5AX 6AX 7AB 
+    *  97   -0.000025  (   19,    5)  2AX 3AB 4AX 5AX 6AX 7AA 
+    *  98   -0.000023  (   20,   20)  3AX 4AX 5AX 6AX 7AX 
+    *  99    0.000022  (    0,    4)  1AX 2AA 3AX 4AX 5AX 6AB 
+    * 100    0.000022  (    4,    0)  1AX 2AB 3AX 4AX 5AX 6AA 
+    * 101   -0.000019  (    9,   20)  1AA 3AX 4AX 5AX 6AB 7AX 
+    * 102   -0.000019  (   20,    9)  1AB 3AX 4AX 5AX 6AA 7AX 
+    * 103    0.000019  (   10,   16)  1AB 2AA 3AX 4AA 5AX 6AB 7AX 
+    * 104    0.000019  (   16,   10)  1AA 2AB 3AX 4AB 5AX 6AA 7AX 
+    * 105    0.000019  (    4,   19)  1AA 2AB 3AA 4AX 5AX 6AX 7AB 
+    * 106    0.000019  (   19,    4)  1AB 2AA 3AB 4AX 5AX 6AX 7AA 
+    * 107   -0.000019  (   13,   14)  1AA 2AB 3AX 4AX 6AX 7AX 
+    * 108   -0.000019  (   14,   13)  1AB 2AA 3AX 4AX 6AX 7AX 
+    * 109   -0.000016  (   14,   14)  2AX 3AX 4AX 6AX 7AX 
+    * 110    0.000014  (   10,   17)  2AX 3AX 4AA 5AX 6AB 7AX 
+    * 111    0.000014  (   17,   10)  2AX 3AX 4AB 5AX 6AA 7AX 
+    * 112   -0.000014  (    9,   17)  1AA 2AB 3AX 4AA 5AX 6AB 7AX 
+    * 113   -0.000014  (   17,    9)  1AB 2AA 3AX 4AB 5AX 6AA 7AX 
+    * 114    0.000012  (    3,   20)  1AA 2AA 3AB 4AX 5AX 6AX 7AB 
+    * 115    0.000012  (   20,    3)  1AB 2AB 3AA 4AX 5AX 6AX 7AA 
+    * 116   -0.000012  (    7,   17)  1AA 2AX 3AX 5AX 6AB 7AX 
+    * 117   -0.000012  (   17,    7)  1AB 2AX 3AX 5AX 6AA 7AX 
+    * 118    0.000012  (   17,   20)  2AA 3AX 4AB 5AX 6AX 7AX 
+    * 119    0.000012  (   20,   17)  2AB 3AX 4AA 5AX 6AX 7AX 
+    * 120   -0.000011  (   11,   14)  1AA 2AX 3AX 4AB 6AX 7AX 
+    * 121   -0.000011  (   14,   11)  1AB 2AX 3AX 4AA 6AX 7AX 
+    * 122    0.000007  (    6,   14)  1AA 2AX 3AX 4AX 6AB 7AX 
+    * 123    0.000007  (   14,    6)  1AB 2AX 3AX 4AX 6AA 7AX 
+    * 124   -0.000007  (    5,   15)  1AB 2AX 3AA 4AA 5AX 6AX 7AB 
+    * 125   -0.000007  (   15,    5)  1AA 2AX 3AB 4AB 5AX 6AX 7AA 
+    * 126   -0.000007  (   10,   20)  2AA 3AX 4AX 5AX 6AB 7AX 
+    * 127   -0.000007  (   20,   10)  2AB 3AX 4AX 5AX 6AA 7AX 
+    * 128    0.000007  (    5,   18)  1AB 2AA 3AA 4AX 5AX 6AX 7AB 
+    * 129    0.000007  (   18,    5)  1AA 2AB 3AB 4AX 5AX 6AX 7AA 
+    * 130   -0.000007  (    3,   17)  1AA 2AX 3AB 4AA 5AX 6AX 7AB 
+    * 131   -0.000007  (   17,    3)  1AB 2AX 3AA 4AB 5AX 6AX 7AA 
+    * 132    0.000000  (    2,   19)  1AA 2AX 3AA 4AB 5AX 6AX 7AB 
+    * 133    0.000000  (   19,    2)  1AB 2AX 3AB 4AA 5AX 6AX 7AA 
+
+		 "A good bug is a dead bug" 
+
+			 - Starship Troopers
+
+		 "I didn't write FORTRAN.  That's the problem."
+
+			 - Edward Valeev
+---------------------------------------------------------
+                          CASCCSD STARTED
+        ---------------------------------------------------------
+Number of Electrons:            10
+Number of Basis Functions:      7
+Number of Molecular Orbitals:   7
+Number of Doubly ocuppied MOs:  5
+
+Number of Frozen dobly occ MOs: 0
+
+Number of Frozen virtual MOs:   0
+
+Converting atomic integrals to MO integrals...
+Completed in 0.03429222106933594 seconds!
+
+ --------- CASDecom STARTED --------- 
+
+Abs HF C0 value:    0.98656
+Max CI coef found:  0.98656
+Collecting CI coefficients from CASCI eigenvector
+Collection completed.
+
+Cluster Decomposition Started
+   -> T1        done.
+   -> T2        done.
+   -> T3        done.
+   -> T4 (ABAA) done.
+   -> T4 (ABAB) done.
+Decomposition completed.
+
+ --------- CASDecom FINISHED ---------
+
+CC Energy:  -75.0131546782
+Building Auxiliar D matrices...
+
+Done. Time required: 0.00004 seconds
+
+ Starting CCSD Iterations
+====================================
+Iteration 1
+Correlation energy:    -0.0498356552
+Energy change:         -0.0000000295
+T1 Residue:                 1.04E-07
+T2 Residue:                 5.96E-08
+Time required (s):      0.0050511360
+====================================
+Iteration 2
+Correlation energy:    -0.0498356570
+Energy change:         -0.0000000018
+T1 Residue:                 1.12E-08
+T2 Residue:                 1.12E-08
+Time required (s):      0.0049583912
+====================================
+
+CC Equations Converged!!!
+Time required: 0.01003265380859375
+Final CASCCSD Energy:     -75.0131547096
+
+CAS energy:      -75.0131547016
+CASCCSD  energy: -75.0131547096
+
+    Psi4 stopped on: Saturday, 11 January 2020 04:24PM
+    Psi4 wall time for execution: 0:00:01.09
+
+*** Psi4 exiting successfully. Buy a developer a beer!

@@ -1,0 +1,23 @@
+molecule mol {
+    0 1
+    O
+    O 1 1.208
+    symmetry c1
+}
+
+set {
+    BASIS         3-21g
+    REFERENCE     RHF
+    SCF_TYPE      PK
+    SOSCF         True
+    E_CONVERGENCE 8
+    MAXITER       100
+    MAX_ATTEMPTS  10
+    GUESS         READ
+    NUM_DETS_PRINT 100000
+    FCI           True
+    DETCI_FREEZE_CORE False
+    ACTIVE = [16]
+}
+
+e, wfn = energy('detci', return_wfn=True)
