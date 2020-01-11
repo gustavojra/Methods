@@ -10,6 +10,8 @@ sys.path.append('./')
 from CASDecom import CASDecom
 from Det import Det
 from CIfromDETCI import read_ci_vec
+from printtensor import *
+from save_amp import *
 
 print_to_output = True
 
@@ -22,11 +24,11 @@ def printout(x):
 
 class CASCCSD:
 
-    def __init__(self, wfn, CC_CONV=6, CC_MAXITER=50, E_CONV = 8, MP2_GUESS=False, RELAX_T3T1=True):
+    def __init__(self, wfn, CC_CONV=6, CC_MAXITER=50, E_CONV = 8, MP2_GUESS=False, RELAX_T3T1=True, read_amp=False, write_amp=False):
 
         # Collect data from CI wavefunction
 
-        self.Escf = wfn.energy()
+        self.Escf = wfn.reference_wavefunction().energy()
         self.nelec = wfn.nalpha() + wfn.nbeta()
         if self.nelec % 2 != 0:
             raise NameError('Number of electrons cannot be odd for RHF')
@@ -39,6 +41,8 @@ class CASCCSD:
         self.Vnuc = wfn.molecule().nuclear_repulsion_energy()
         self.fdocc = sum(wfn.frzcpi())
         self.fvir = sum(wfn.frzvpi())
+        self.read_amp = read_amp
+        self.write_amp = write_amp
         
         printout(\
         """---------------------------------------------------------
@@ -231,7 +235,6 @@ class CASCCSD:
         # Compare CAS energy with the energy obtained from the translated amplitudes (They should be the same)
 
         self.cc_energy()
-        printout('\n')
         #printout('CAS energy and initial TCC energy:')
         #printout('CAS Energy: {:<5.10f}'.format(self.Ecas))
         printout('CC Energy:  {:<5.10f}'.format(self.Ecc + self.Escf))
@@ -299,6 +302,26 @@ class CASCCSD:
             self.T2  = np.einsum('ijab,ijab->ijab', self.Vint[o,o,v,v], self.D)
             self.cc_energy()
             printout('MP2 Energy: {:<5.10f}'.format(self.Ecc+self.Escf))
+
+        else:
+            # Use MP2 guess for the amplitudes outisde CAS
+
+            hold = copy.deepcopy(self.T2)
+            self.T2  = np.einsum('ijab,ijab->ijab', self.Vint[o,o,v,v], self.D)
+            h = slice(self.fdocc, self.ndocc)
+            p = slice(0, self.nvir-self.fvir)
+            self.T2[h,h,p,p] = hold[h,h,p,p]
+
+        if self.read_amp:
+            printout('\n Reading amplitudes from disk')
+            self.T1 = read_T1(self.ndocc, self.nvir)
+            self.T2 = read_T2(self.ndocc, self.nvir)
+            printout('\n T1 read from disk:\n')
+            printtensor(self.T1)
+            printout('\n T2 read from disk:\n')
+            printtensor(self.T2)
+            self.cc_energy()
+            printout('CC energy from disk amplitudes: {:<5.10f}'.format(self.Ecc+self.Escf))
             
         self.r1 = 1
         self.r2 = 1
@@ -327,6 +350,10 @@ class CASCCSD:
             printout("T2 Residue:            {:>13.2E}".format(self.r2))
             printout("Time required (s):     {:< 5.10f}".format(time.time() - t))
             printout('='*36)
+        if self.write_amp:
+            printout('\nWriting amplitudes...')
+            write_T1(self.T1)
+            write_T2(self.T2)
         tcc = time.time() - tcc 
         self.Ecc = self.Ecc + self.Escf
         printout("\nCC Equations Converged!!!")

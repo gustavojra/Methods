@@ -1,6 +1,9 @@
 import sys
 sys.path.append('../Modules/')
 from CASCCSD import CASCCSD
+from TCCSD import TCCSD
+from printtensor import *
+from save_amp import *
 
 molecule mol {
     0 1
@@ -11,7 +14,7 @@ molecule mol {
 }
 
 set {
-    BASIS         cc-pvdz
+    BASIS         6-31g
     REFERENCE     RHF
     SCF_TYPE      PK
     SOSCF         True
@@ -19,9 +22,7 @@ set {
     MAXITER       100
     MAX_ATTEMPTS  10
     GUESS         READ
-    NUM_DETS_PRINT 10000
-    FROZEN_DOCC = [2]
-    FROZEN_UOCC = [14]
+    NUM_DETS_PRINT 100000
     FCI           True
     DETCI_FREEZE_CORE False
 }
@@ -29,5 +30,13 @@ set {
 e, wfn = energy('detci', return_wfn=True)
 X = CASCCSD(wfn)
 
-print('CAS energy: {:<5.10f}'.format(e))
-print('CC  energy: {:<5.10f}'.format(X.Ecc))
+write_T1(X.T1)
+write_T2(X.T2)
+
+t2read = read_T2(5, 8)
+
+printtensor(X.T2 - t2read)
+
+print_out('\nCAS energy:      {:<5.10f}\n'.format(e))
+#print_out('TCCSD    energy: {:<5.10f}\n'.format(Y.Ecc))
+print_out('CASCCSD  energy: {:<5.10f}\n'.format(X.Ecc))

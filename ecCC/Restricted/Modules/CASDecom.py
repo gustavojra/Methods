@@ -57,13 +57,15 @@ def CASDecom(Ccas, determinants, ref, fdocc = 0, fvir = 0, return_t3 = True, ret
     # Get the C0 coefficient, corresponding to the reference determinant
 
     C0 = Ccas[np.where(np.array(determinants) == ref)[0][0]]
+    maxC = np.max(abs(np.array(Ccas)))
     
     # Since CC requires a non zero coefficient for the reference, it is required that C0 be above a threshold
 
     if abs(C0) < 0.01:
         raise NameError('Leading Coefficient too small C0 = {}\n Restricted orbitals not appropriate.'.format(C0))
 
-    printout('Abs C0 value: {:<5.5f}'.format(abs(C0)))
+    printout('Abs HF C0 value:    {:<5.5f}'.format(abs(C0)))
+    printout('Max CI coef found:  {:<5.5f}'.format(abs(maxC)))
 
     # Normalize the CI vector with respect to the reference
 

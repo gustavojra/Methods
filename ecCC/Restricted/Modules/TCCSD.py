@@ -27,7 +27,7 @@ class TCCSD:
 
         # Collect data from CI wavefunction
 
-        self.Escf = wfn.energy()
+        self.Escf = wfn.reference_wavefunction().energy()
         self.nelec = wfn.nalpha() + wfn.nbeta()
         if self.nelec % 2 != 0:
             raise NameError('Number of electrons cannot be odd for RHF')
@@ -44,7 +44,7 @@ class TCCSD:
         printout(\
         """---------------------------------------------------------
                             TCCSD STARTED
-        ---------------------------------------------------------""")
+           ---------------------------------------------------------""")
         printout("Number of Electrons:            {}".format(self.nelec))
         printout("Number of Basis Functions:      {}".format(self.nbf))
         printout("Number of Molecular Orbitals:   {}".format(self.nmo))
@@ -213,9 +213,10 @@ class TCCSD:
         t = time.time()
         
         # Generate initial T1 and T2 amplitudes
+        # Use MP2 guess for external amplitudes
 
         self.T1 = np.zeros([self.ndocc, self.nvir])
-        self.T2  = np.zeros([self.ndocc, self.ndocc, self.nvir, self.nvir])
+        self.T2  = np.einsum('ijab,ijab->ijab', self.Vint[o,o,v,v], self.D)
         
         self.T1[self.h_space, self.p_space] = self.FROZEN_T1
         self.T2[self.h_space, self.h_space, self.p_space, self.p_space] = self.FROZEN_T2
