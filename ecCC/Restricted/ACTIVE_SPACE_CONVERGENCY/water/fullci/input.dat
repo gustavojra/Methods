@@ -1,13 +1,15 @@
 import sys
-sys.path.append('Modules/')
+sys.path.append('../Modules/')
 from CASCCSD import CASCCSD
 from TCCSD import TCCSD
+from printtensor import *
+from save_amp import *
 
 molecule mol {
     0 1
-    He 
-    He 1 2.0
-    He 1 2.0 2 120.0
+    O
+    H 1 0.96
+    H 1 0.96 2 104.5
     symmetry c1
 }
 
@@ -19,14 +21,14 @@ set {
     E_CONVERGENCE 8
     MAXITER       100
     MAX_ATTEMPTS  10
-    NUM_DETS_PRINT 10000
+    GUESS         READ
+    NUM_DETS_PRINT 100000
     FCI           True
     DETCI_FREEZE_CORE False
 }
 
 e, wfn = energy('detci', return_wfn=True)
-X = TCCSD(wfn)
 
-print('CAS energy:   {:<5.10f}'.format(e))
-print('ecCC  energy: {:<5.10f}'.format(X.Ecc))
-print('CCSD  energy: {:<5.10f}'.format(energy('ccsd')))
+#print_out('\nCAS energy:      {:<5.10f}\n'.format(e))
+#print_out('TCCSD    energy: {:<5.10f}\n'.format(Y.Ecc))
+#print_out('CASCCSD  energy: {:<5.10f}\n'.format(X.Ecc))
