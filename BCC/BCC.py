@@ -306,11 +306,11 @@ while r2 > LIM or r1 > LIM:
 print("\nCC Equations Converged!!!")
 print("Final CCSD Energy:     {:<5.10f}".format(E + scf_e))
 print('CCSD Energy from Psi4: {:<5.10f}'.format(psi4.energy('ccsd')))
-#print('CCSD Energy from Psi4: {:<5.10f}'.format(p4_bccd))
+first = E + scf_e
 
 newC = C.to_array()
 
-while T1.max() > 1e-8:
+while T1.max() > 1e-10:
 
     X = np.block([
                    [ np.zeros([ndocc, ndocc]), np.zeros_like(T1)],
@@ -320,48 +320,9 @@ while T1.max() > 1e-8:
     U = sp.expm(X - X.T)
     newC = newC.dot(U)
 
-#    print('Rotating Orbitals...')
+    print('Rotating Orbitals...')
     
     oldC = copy.deepcopy(newC)
-#
-#    def rotate(i,a):
-#        T = T1[i,a]
-#        a = a + ndocc
-#        newC[:,i] = newC[:,i] + oldC[:,a]*T
-#        newC[:,a] = newC[:,a] - oldC[:,i]*T
-#
-#    print('OLD')
-#    Sao = np.array(mints.ao_overlap())
-#    printmatrix(oldC)
-#    #S = overlap(psi4.core.Matrix.from_array(newC), mints)
-#    
-#    printmatrix(oldC.T.dot(Sao).dot(oldC))
-#    
-#    for i in range(ndocc):
-#        for a in range(nvir):
-#            rotate(i,a)
-#            
-#    print('New')
-#    printmatrix(newC)
-#    S = overlap(psi4.core.Matrix.from_array(newC), mints)
-#    
-#    printmatrix(S)
-#
-#    newC = np.zeros([nbf, nbf])
-#
-#    newC[:,o] = oldC[:,o] + np.einsum('ua,ia->ui', oldC[:,v], T1)
-#    newC[:,v] = oldC[:,v] - np.einsum('ui,ia->ua', oldC[:,o], T1)
-#
-#    print('Via einsum')
-#    printmatrix(newC)
-#
-#    raise NameError('Stop')
-    
-#
-#    S = overlap(psi4.core.Matrix.from_array(newC), mints)
-#    
-#    printmatrix(S)
-
     
     h, Vint = compute_integrals(psi4.core.Matrix.from_array(newC), mints)
     
@@ -422,10 +383,13 @@ while T1.max() > 1e-8:
     print("\nCC Equations Converged!!!")
     print("Final CCSD Energy:     {:<5.10f}".format(E + scf_e))
 
-print('FInal overlap')
+print('Final T1')
+printmatrix(T1)
+print('Final overlap')
 S = overlap(psi4.core.Matrix.from_array(newC), mints)
 printmatrix(S)
 eccsd = psi4.energy('ccsd')
 ebccd = psi4.energy('bccd')
 print('Psi4 CCSD {:<5.10f}'.format(eccsd))
 print('Psi4 BCCD {:<5.10f}'.format(ebccd))
+print(first)
