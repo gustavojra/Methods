@@ -202,6 +202,8 @@ def CASCI(active_space, davidson = False, rot = False):
 
     Ecas, Ccas, ref, determinants = compute(active_space, OEI, ERI, nelec, ndocc, nvir, verb=True)
 
+    print('initial ener', Ecas)
+
     T1 = np.zeros([ndocc, nvir])
     C0 = Ccas[list(determinants).index(ref)]
     Ccas = Ccas/C0

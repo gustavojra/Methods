@@ -12,18 +12,20 @@ molecule mol {
 }
 
 set {
-    BASIS         sto-3g
+    BASIS         3-21g
     REFERENCE     RHF
     SCF_TYPE      PK
     E_CONVERGENCE 12
     MAXITER       100
     MAX_ATTEMPTS  10
     FCI           True
+    FROZEN_DOCC = [0]
+    ACTIVE = [8]
 }
 
 e = energy('detci')
 
-CASCI('full', rot = True)
+CASCI('aaaaaaaauuuuu', rot = True)
 print(e)
 
 
