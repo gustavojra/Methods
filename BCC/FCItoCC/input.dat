@@ -1,0 +1,23 @@
+from CASCI import CASCI
+
+molecule mol {
+    0 1
+    He
+    He 1 R
+    R = 1.0
+    symmetry c1
+}
+
+set {
+    BASIS         3-21g
+    REFERENCE     RHF
+    SCF_TYPE      PK
+    E_CONVERGENCE 12
+    MAXITER       100
+    MAX_ATTEMPTS  10
+    FCI           True
+}
+
+CASCI('full', rot=True, ccsd=True, ccd=False)
+e = energy('detci')
+print(e)

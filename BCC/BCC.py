@@ -47,7 +47,7 @@ def compute_integrals(C, mints):
     return h, V
 
 def get_fock(h, V):
-    fo = h + 2*np.einsum('piqi->pq', Vint[:,o,:,o]) - np.einsum('piiq->pq', Vint[:,o,o,:])
+    fo = h + 2*np.einsum('piqi->pq', V[:,o,:,o]) - np.einsum('piiq->pq', V[:,o,o,:])
     fd = np.array(fo.diagonal())
     np.fill_diagonal(fo, 0)
     return fd, fo
