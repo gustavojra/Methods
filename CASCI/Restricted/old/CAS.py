@@ -8,11 +8,13 @@ import copy
 from multiprocessing import Pool
 from itertools import permutations
 
-file_dir = os.path.dirname('../../Aux/')
-sys.path.append(file_dir)
+dir1 = os.path.dirname('../../Aux/')
+dir2 = os.path.dirname('../../ecCC/Restricted/Modules/')
+sys.path.append(dir1)
+sys.path.append(dir2)
 
 from tools import *
-from fock import *
+from Det import *
 from Hamiltonian import *
 
 np.set_printoptions(suppress=True)

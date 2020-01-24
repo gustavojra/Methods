@@ -56,7 +56,7 @@ def cc_energy(T1, T2):
 
     tau = T2 + np.einsum('ia,jb->ijab', T1, T1)
     X = 2*tau - np.einsum('ijab->jiab',tau)
-    E = np.einsum('abij,ijab->', Vint[v,v,o,o], X)
+    E = 2*np.einsum('ia,ia->', fo[o,v], T1) + np.einsum('abij,ijab->', Vint[v,v,o,o], X)
     return E
 
 def overlap(C, mints):
@@ -64,7 +64,7 @@ def overlap(C, mints):
     Sorb = np.einsum('up,vq,uv->pq', C, C, S)
     return Sorb
 
-def get_d(fo):
+def get_d(fd):
     D  = np.zeros([ndocc, ndocc, nvir, nvir])
     d  = np.zeros([ndocc, nvir])
     
@@ -115,8 +115,8 @@ def CCSD_Iter(T1, T2, fo, d, D, EINSUMOPT='optimal'):
     # T2 Amplitudes update
 
     J = np.einsum('ap,uvag->uvpg',fo[v,v],T2) - np.einsum('ui,ivpg->uvpg',fo[o,o],T2) 
-    J += np.einsum('ai,uvag,ip->uvpg',fo[v,o],T2,T1) 
-    J += np.einsum('ai,uipg,va->uvpg',fo[v,o],T2,T1) 
+    #J += np.einsum('ai,uvag,ip->uvpg',fo[v,o],T2,T1) 
+    #J += np.einsum('ai,uipg,va->uvpg',fo[v,o],T2,T1) 
 
     J += np.einsum('ag,uvpa->uvpg', gap, T2,optimize=EINSUMOPT) - np.einsum('vi,uipg->uvpg', giu, T2,optimize=EINSUMOPT)
 
@@ -141,8 +141,9 @@ def CCSD_Iter(T1, T2, fo, d, D, EINSUMOPT='optimal'):
 
     # Fock terms
 
-    T1new = -fo[o,v] + np.einsum('ui,ip->up', fo[o,o], T1) 
-    T1new += -np.einsum('ap,ua->up', fo[v,v], T1) + 2*np.einsum('ai,uipa->up',fo[v,o],T2) - np.einsum('ai,uiap->up', fo[v,o], tau)
+    T1new = -fo[o,v] #+ np.einsum('ui,ip->up', fo[o,o], T1) 
+    #T1new += -np.einsum('ap,ua->up', fo[v,v], T1) 
+    T1new += 2*np.einsum('ai,uipa->up',fo[v,o],T2) - np.einsum('ai,uiap->up', fo[v,o], tau)
 
     # Regular
 
@@ -157,16 +158,15 @@ def CCSD_Iter(T1, T2, fo, d, D, EINSUMOPT='optimal'):
 
     T1new = np.einsum('up,up->up', T1new, d,optimize=EINSUMOPT)
     
-    res1 = np.sum(np.abs(T1new - T1))
+    maxt1 = np.max(abs(T1new))
 
-    return T1new, T2new, res1, res2
+    return T1new, T2new, res2, maxt1
 
 # Input Geometry    
 
-#H2 = psi4.geometry("""
+#He = psi4.geometry("""
 #    0 1
-#    H 
-#    H 1 0.76
+#    He
 #    symmetry c1
 #""")
 
@@ -221,12 +221,13 @@ scf_e, wfn = psi4.energy('scf', return_wfn=True)
 
 print('Collecting Hartree-Fock orbitals\n')
 nelec = wfn.nalpha() + wfn.nbeta()
-C = wfn.Ca()
+C = wfn.Ca().np
 ndocc = wfn.doccpi()[0]
 nmo = wfn.nmo()
 nvir = nmo - ndocc
 fd = np.asarray(wfn.epsilon_a())
 nbf = C.shape[0]
+Vnuc = wfn.molecule().nuclear_repulsion_energy()
 
 print("Number of Basis Functions:      {}".format(nbf))
 print("Number of Electrons:            {}".format(nelec))
@@ -237,7 +238,7 @@ print("Number of Doubly ocuppied MOs:  {}".format(ndocc))
 
 print("Converting atomic integrals to MO integrals...")
 mints = psi4.core.MintsHelper(wfn.basisset())
-h, Vint = compute_integrals(C, mints)
+h, Vint = compute_integrals(psi4.core.Matrix.from_array(C), mints)
 
 # Slices
 
@@ -246,7 +247,10 @@ v = slice(ndocc, nbf)
 
 # Compute Fock Matrix
 
+print("eig from psi4", fd)
 fd, fo = get_fock(h, Vint)
+print("eig from my code", fd)
+printmatrix(fo)
 
 # START CCSD CODE
 
@@ -257,7 +261,7 @@ print('\n----------------- RUNNING CCD ------------------')
 print('\nBuilding Auxiliar D matrix...')
 t = time.time()
 
-d, D = get_d(fo)
+d, D = get_d(fd)
 
 print('\nComputing MP2 guess')
 
@@ -274,87 +278,73 @@ print('MP2 Energy: {:<5.10f}     Time required: {:.5f}'.format(E+scf_e, time.tim
 r1 = 0
 r2 = 1
 CC_CONV = 8
-CC_MAXITER = 30
-    
+CC_MAXITER = 300
 LIM = 10**(-CC_CONV)
+rotate = True
 
+if rotate:
+    LIMt1 = 1.e-8
+else:
+    LIMt1 = 100
+    
+
+maxt1 = 1
 ite = 0
 
-while r2 > LIM or r1 > LIM:
+
+while r2 > LIM or maxt1 > LIMt1:
     ite += 1
     if ite > CC_MAXITER:
         raise NameError("CC Equations did not converge in {} iterations".format(CC_MAXITER))
+
+    if rotate:
+        # Create transformation matrix
+        X = np.block([
+                       [ np.zeros([ndocc, ndocc]), np.zeros_like(T1)],
+                       [ T1.T, np.zeros([nvir, nvir])]])
+
+        U = sp.expm(X - X.T)
+
+        # Rotate orbitals
+        C = C.dot(U)
+
+        # Transform integrals
+        h, Vint = compute_integrals(psi4.core.Matrix.from_array(C), mints)
+        
+        fd, fo = get_fock(h, Vint)
+        
+        d, D = get_d(fd)
+    
+    # Update amplitudes
     Eold = E
-    t = time.time()
-    T1, T2, r1, r2 = CCSD_Iter(T1, T2, fo, d, D)
+    T1, T2, r2, maxt1 = CCSD_Iter(T1, T2, fo, d, D)
     E = cc_energy(T1, T2)
     dE = E - Eold
     print('-'*50)
     print("Iteration {}".format(ite))
     print("CC Correlation energy: {}".format(E))
     print("Energy change:         {}".format(dE))
-    print("T1 Residue:            {}".format(r1))
     print("T2 Residue:            {}".format(r2))
-    print("Max T1 Amplitude:      {}".format(np.max(T1)))
+    print("Max T1 Amplitude:      {}".format(maxt1))
     print("Max T2 Amplitude:      {}".format(np.max(T2)))
-    print("Time required:         {}".format(time.time() - t))
     print('-'*50)
 
+# Update scf energy
+
+Bscf_e = 2*np.einsum('ii->', h[o,o]) + np.einsum('ijij->', 2*Vint[o,o,o,o]) - np.einsum('ijji->', Vint[o,o,o,o]) + Vnuc
+
 print("\nCC Equations Converged!!!")
-print("Final CCSD Energy:     {:<5.10f}".format(E + scf_e))
-print('CCSD Energy from Psi4: {:<5.10f}'.format(psi4.energy('ccsd')))
-first = E + scf_e
-
-newC = C.to_array()
-
-while T1.max() > 1e-10:
-
-    # Create transformation matrix
-    X = np.block([
-                   [ np.zeros([ndocc, ndocc]), np.zeros_like(T1)],
-                   [ T1.T, np.zeros([nvir, nvir])]])
-
-    U = sp.expm(X - X.T)
-
-    # Rotate orbitals
-    newC = newC.dot(U)
-
-    # Transform integrals
-    h, Vint = compute_integrals(psi4.core.Matrix.from_array(newC), mints)
-    
-    fd, fo = get_fock(h, Vint)
-    
-    d, D = get_d(fo)
-    
-    r1 = 0
-    r2 = 1
-    CC_CONV = 8
-    CC_MAXITER = 30
-        
-    LIM = 10**(-CC_CONV)
-    
-    ite = 0
-    
-    while r2 > LIM or r1 > LIM:
-        ite += 1
-        if ite > CC_MAXITER:
-            raise NameError("CC Equations did not converge in {} iterations".format(CC_MAXITER))
-        Eold = E
-        t = time.time()
-        T1, T2, r1, r2 = CCSD_Iter(T1, T2, fo, d, D)
-        E = cc_energy(T1, T2)
-        dE = E - Eold
-
-    print("\nCC Equations Converged!!!")
-    print("Final CCSD Energy:     {:<5.10f}".format(E + scf_e))
+print("Final Ref. Energy:     {:<5.10f}".format(Bscf_e))
+print("Final BCCD Energy:     {:<5.10f}".format(E + Bscf_e))
 
 print('Final T1')
 printmatrix(T1)
 print('Final overlap')
-S = overlap(psi4.core.Matrix.from_array(newC), mints)
+S = overlap(psi4.core.Matrix.from_array(C), mints)
 printmatrix(S)
 eccsd = psi4.energy('ccsd')
 ebccd = psi4.energy('bccd')
+rhf = psi4.energy('scf')
 print('Psi4 CCSD {:<5.10f}'.format(eccsd))
 print('Psi4 BCCD {:<5.10f}'.format(ebccd))
-print('Psi4 SCF  {:<5.10f}'.format(scf_e))
+print('Psi4 SCF  {:<5.10f}'.format(rhf))

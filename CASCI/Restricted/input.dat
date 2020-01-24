@@ -1,24 +1,29 @@
-import os
-import sys
-import numpy as np
-from CAS import CAS
+from CASCI import CASCI
 
 molecule mol {
     0 1
     O
-    H 1 1.0
-    H 1 1.0 2 104.5
+    H 1 R
+    H 1 R 2 A
+    
+    R = .9
+    A = 104.5
     symmetry c1
 }
 
 set {
-    BASIS         3-21g
+    BASIS         sto-3g
     REFERENCE     RHF
     SCF_TYPE      PK
-    SOSCF         True
-    E_CONVERGENCE 8
+    E_CONVERGENCE 12
+    MAXITER       100
+    MAX_ATTEMPTS  10
+    FCI           True
 }
 
-x = CAS(mol)
+e = energy('detci')
 
-x.CAS('aaaaaaaauuuuu',par=True)
+CASCI('full', rot = True)
+print(e)
+
+
