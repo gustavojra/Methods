@@ -1,0 +1,20 @@
+from CCSD import CCSD
+
+molecule mol {
+    0 1
+    O
+    H 1 0.9
+    H 1 0.9 2 104.5
+    symmetry c1
+}
+
+set {
+    BASIS         sto-3g
+    REFERENCE     RHF
+    SCF_TYPE      PK
+    E_CONVERGENCE 12
+}
+
+e, wfn = energy('scf', return_wfn=True)
+
+X = CCSD(wfn)
