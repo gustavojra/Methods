@@ -2,14 +2,15 @@ from CASCI import CASCI
 
 molecule mol {
     0 1
-    He
-    He 1 R
+    O
+    H 1 R
+    H 1 R 2 104.5
     R = 1.0
     symmetry c1
 }
 
 set {
-    BASIS         3-21g
+    BASIS         sto-3g
     REFERENCE     RHF
     SCF_TYPE      PK
     E_CONVERGENCE 12
@@ -18,6 +19,4 @@ set {
     FCI           True
 }
 
-CASCI('full', rot=True, ccsd=True, ccd=False)
-e = energy('detci')
-print(e)
+CASCI('full', rot=True, ccsd=False, ccd=True)
