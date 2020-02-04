@@ -541,9 +541,8 @@ class CCSD:
 
         print('MP2 Energy:   {:<15.10f}'.format(Emp2))
 
-        self.update_Fint()
-        self.update_Winf()        
-        self.update_energy()
-        print(self.Ecc + self.Ehf)
-
-
+        for i in range(0,21):
+            self.update_Fint()
+            self.update_Winf()        
+            self.update_energy()
+            print(self.Ecc + self.Ehf)
