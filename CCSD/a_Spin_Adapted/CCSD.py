@@ -169,6 +169,32 @@ class CCSD:
         else:
             raise NameError('Invalid amplitude key')
 
+    def Fint(self, arg):
+
+        if arg.isupper():
+            
+            if arg[0] in 'ABCDEF' and arg[1] in 'ABCDEF':
+                return self.F['AE']
+            elif arg[0] in 'IJKLMN' and arg[1] in 'IJKLMN':
+                return self.F['MI']
+            elif arg[0] in 'IJKLMN' and arg[1] in 'ABCDEF':
+                return self.F['ME']
+            else:
+                raise NameError('Invalid F intermediated key')
+
+        if arg.islower():
+            
+            if arg[0] in 'abcdef' and arg[1] in 'abcdef':
+                return self.F['ae']
+            elif arg[0] in 'ijklmn' and arg[1] in 'ijklmn':
+                return self.F['mi']
+            elif arg[0] in 'ijklmn' and arg[1] in 'abcdef':
+                return self.F['me']
+            else:
+                raise NameError('Invalid F intermediated key')
+        else:
+            raise NameError('Invalid F intermediated key')
+
     def update_energy(self):
         
         self.Ecc  = np.einsum('IA,IA->', self.f('IA'), self.T('IA'))
@@ -235,7 +261,7 @@ class CCSD:
         self.F['MI'] += +0.5*np.einsum('INEF,MNEF->MI', X, self.V('MNEF'))
 
         X = self.T('InEf') + 0.5*np.einsum('IE,nf->InEf', self.T('IE'), self.T('nf'))
-        self.F['MI'] += +0.5*np.einsum('InEf,MnEf', X, self.V('MnEf'))
+        self.F['MI'] += +0.5*np.einsum('InEf,MnEf->MI', X, self.V('MnEf'))
 
         X = self.T('IneF') - 0.5*np.einsum('IF,ne->IneF', self.T('IF'), self.T('ne'))
         self.F['MI'] += +0.5*np.einsum('IneF,MneF->MI', X, self.V('MneF'))
@@ -432,6 +458,369 @@ class CCSD:
         X = 0.5*self.T('jNfB') + np.einsum('jf,NB->jNfB', self.T('jf'), self.T('NB'))
         self.W['mBEj'] += -np.einsum('jNfB,mNEf->mBEj', X, self.V('mNEf'))
 
+    def update_amp(self):
+
+        # Create a new set of amplitudes
+
+        newT1 = {
+        'IA' : np.zeros(self.T('IA').shape),
+        'ia' : np.zeros(self.T('ia').shape)
+        }
+
+        newT2 = {
+        'IJAB' : np.zeros(self.T('IJAB').shape),
+        'ijab' : np.zeros(self.T('ijab').shape),
+        'IjAb' : np.zeros(self.T('IjAb').shape),
+        'IjaB' : np.zeros(self.T('IjaB').shape),
+        'iJaB' : np.zeros(self.T('iJaB').shape),
+        'iJAb' : np.zeros(self.T('iJAb').shape)
+        }
+
+        # Update T(IA)
+        newT1['IA'] += self.f('IA') 
+        newT1['IA'] += np.einsum('IE,AE->IA', self.T('IE'), self.F['AE'])
+        newT1['IA'] += -np.einsum('MA,MI->IA', self.T('MA'), self.F['MI'])
+        newT1['IA'] += np.einsum('IMAE,ME->IA', self.T('IMAE'), self.F['ME'])
+        newT1['IA'] += np.einsum('ImAe,me->IA', self.T('ImAe'), self.F['me'])
+        newT1['IA'] += np.einsum('ME,AMIE->IA', self.T('ME'), self.V('AMIE'))
+        newT1['IA'] += np.einsum('me,AmIe->IA', self.T('me'), self.V('AmIe'))
+        newT1['IA'] += -0.5*np.einsum('MNAE,MNIE->IA', self.T('MNAE'), self.V('MNIE'))
+        newT1['IA'] += -0.5*np.einsum('MnAe,MnIe->IA', self.T('MnAe'), self.V('MnIe'))
+        newT1['IA'] += -0.5*np.einsum('mNAe,mNIe->IA', self.T('mNAe'), self.V('mNIe'))
+        newT1['IA'] += 0.5*np.einsum('IMEF,AMEF->IA', self.T('IMEF'), self.V('AMEF'))
+        newT1['IA'] += 0.5*np.einsum('ImEf,AmEf->IA', self.T('ImEf'), self.V('AmEf'))
+        newT1['IA'] += 0.5*np.einsum('ImeF,AmeF->IA', self.T('ImeF'), self.V('AmeF'))
+        newT1['IA'] *= self.d['IA']
+
+        # Update T(ia)
+        newT1['ia'] += self.f('ia') 
+        newT1['ia'] += np.einsum('ie,ae->ia', self.T('ie'), self.F['ae'])
+        newT1['ia'] += -np.einsum('ma,mi->ia', self.T('ma'), self.F['mi'])
+        newT1['ia'] += np.einsum('imae,me->ia', self.T('imae'), self.F['me'])
+        newT1['ia'] += np.einsum('iMaE,ME->ia', self.T('iMaE'), self.F['ME'])
+        newT1['ia'] += np.einsum('me,amie->ia', self.T('me'), self.V('amie'))
+        newT1['ia'] += np.einsum('ME,aMiE->ia', self.T('ME'), self.V('aMiE'))
+        newT1['ia'] += -0.5*np.einsum('mnae,mnie->ia', self.T('mnae'), self.V('mnie'))
+        newT1['ia'] += -0.5*np.einsum('mNaE,mNiE->ia', self.T('mNaE'), self.V('mNiE'))
+        newT1['ia'] += -0.5*np.einsum('MnaE,MniE->ia', self.T('MnaE'), self.V('MniE'))
+        newT1['ia'] += 0.5*np.einsum('imef,amef->ia', self.T('imef'), self.V('amef'))
+        newT1['ia'] += 0.5*np.einsum('iMeF,aMeF->ia', self.T('iMeF'), self.V('aMeF'))
+        newT1['ia'] += 0.5*np.einsum('iMEf,aMEf->ia', self.T('iMEf'), self.V('aMEf'))
+        newT1['ia'] *= self.d['ia']
+
+        # Update T(IJAB)
+
+        newT2['IJAB'] += self.V('IJAB')
+        X = self.F['AE'] - 0.5*np.einsum('MB,ME->BE', self.T('MB'), self.F['ME'])
+        newT2['IJAB'] += np.einsum('IJAE,BE->IJAB', self.T('IJAE'), X)
+
+        X = self.F['AE'] - 0.5*np.einsum('MA,ME->AE', self.T('MA'), self.F['ME']) # Same X as before??
+        newT2['IJAB'] += -np.einsum('IJBE,AE->IJAB', self.T('IJBE'), X)
+
+        X = self.F['MI'] + 0.5*np.einsum('JE,ME->MJ', self.T('JE'), self.F['ME']) 
+        newT2['IJAB'] += -np.einsum('IMAB,MJ->IJAB', self.T('IMAB'), X)
+
+        X = self.F['MI'] + 0.5*np.einsum('IE,ME->MI', self.T('IE'), self.F['ME']) # Same?
+        newT2['IJAB'] += np.einsum('JMAB,MI->IJAB', self.T('JMAB'), X)
+
+        X = self.T('MNAB') + np.einsum('MA,NB->MNAB', self.T('MA'), self.T('NB')) - np.einsum('MB,NA->MNAB', self.T('MB'), self.T('NA'))
+        newT2['IJAB'] += 0.5*np.einsum('MNAB,MNIJ->IJAB', X, self.W['MNIJ'])
+
+        X = self.T('IJEF') + np.einsum('IE,JF->IJEF', self.T('IE'), self.T('JF')) - np.einsum('IF,JE->IJEF', self.T('IF'), self.T('JE'))
+        newT2['IJAB'] += 0.5*np.einsum('IJEF,ABEF->IJAB', X, self.W['ABEF'])
+
+        newT2['IJAB'] += np.einsum('IMAE,MBEJ->IJAB', self.T('IMAE'), self.W['MBEJ'])
+        newT2['IJAB'] += -np.einsum('IE,MA,MBEJ->IJAB', self.T('IE'), self.T('MA'), self.V('MBEJ'))
+
+        newT2['IJAB'] += np.einsum('ImAe,mBeJ->IJAB', self.T('ImAe'), self.W['mBeJ'])
+        
+        newT2['IJAB'] += -np.einsum('IMBE,MAEJ->IJAB', self.T('IMBE'), self.W['MBEJ'])
+        newT2['IJAB'] += np.einsum('IE,MB,MAEJ->IJAB', self.T('IE'), self.T('MB'), self.V('MAEJ'))
+
+        newT2['IJAB'] += -np.einsum('ImBe,mAeJ->IJAB', self.T('ImBe'), self.W['mBeJ'])
+
+        newT2['IJAB'] += -np.einsum('JMAE,MBEI->IJAB', self.T('JMAE'), self.W['MBEJ'])
+        newT2['IJAB'] += np.einsum('JE,MA,MBEI->IJAB', self.T('JE'), self.T('MA'), self.V('MBEI'))
+
+        newT2['IJAB'] += -np.einsum('JmAe,mBeI->IJAB', self.T('JmAe'), self.W['mBeJ'])
+
+        newT2['IJAB'] += np.einsum('JMBE,MAEI->IJAB', self.T('JMBE'), self.W['MBEJ'])
+        newT2['IJAB'] += -np.einsum('JE,MB,MAEI->IJAB', self.T('JE'), self.T('MB'), self.V('MAEI'))
+
+        newT2['IJAB'] += np.einsum('JmBe,mAeI->IJAB', self.T('JmBe'), self.W['mBeJ'])
+
+        newT2['IJAB'] += np.einsum('IE,ABEJ->IJAB', self.T('IE'), self.V('ABEJ'))
+        newT2['IJAB'] += -np.einsum('JE,ABEI->IJAB', self.T('JE'), self.V('ABEI'))
+        newT2['IJAB'] += -np.einsum('MA,MBIJ->IJAB', self.T('MA'), self.V('MBIJ'))
+        newT2['IJAB'] += np.einsum('MB,MAIJ->IJAB', self.T('MB'), self.V('MAIJ'))
+
+        newT2['IJAB'] *= self.D['IJAB']
+
+        # Update T(ijab)
+
+        newT2['ijab'] += self.V('ijab')
+        X = self.F['ae'] - 0.5*np.einsum('mb,me->be', self.T('mb'), self.F['me'])
+        newT2['ijab'] += np.einsum('ijae,be->ijab', self.T('ijae'), X)
+
+        X = self.F['ae'] - 0.5*np.einsum('ma,me->ae', self.T('ma'), self.F['me']) # Same X as before??
+        newT2['ijab'] += -np.einsum('ijbe,ae->ijab', self.T('ijbe'), X)
+
+        X = self.F['mi'] + 0.5*np.einsum('je,me->mj', self.T('je'), self.F['me']) 
+        newT2['ijab'] += -np.einsum('imab,mj->ijab', self.T('imab'), X)
+
+        X = self.F['mi'] + 0.5*np.einsum('ie,me->mi', self.T('ie'), self.F['me']) # Same?
+        newT2['ijab'] += np.einsum('jmab,mi->ijab', self.T('jmab'), X)
+
+        X = self.T('mnab') + np.einsum('ma,nb->mnab', self.T('ma'), self.T('nb')) - np.einsum('mb,na->mnab', self.T('mb'), self.T('na'))
+        newT2['ijab'] += 0.5*np.einsum('mnab,mnij->ijab', X, self.W['mnij'])
+
+        X = self.T('ijef') + np.einsum('ie,jf->ijef', self.T('ie'), self.T('jf')) - np.einsum('if,je->ijef', self.T('if'), self.T('je'))
+        newT2['ijab'] += 0.5*np.einsum('ijef,abef->ijab', X, self.W['abef'])
+
+        newT2['ijab'] += np.einsum('imae,mbej->ijab', self.T('imae'), self.W['mbej'])
+        newT2['ijab'] += -np.einsum('ie,ma,mbej->ijab', self.T('ie'), self.T('ma'), self.V('mbej'))
+
+        newT2['ijab'] += np.einsum('iMaE,MbEj->ijab', self.T('iMaE'), self.W['MbEj'])
+        
+        newT2['ijab'] += -np.einsum('imbe,maej->ijab', self.T('imbe'), self.W['mbej'])
+        newT2['ijab'] += np.einsum('ie,mb,maej->ijab', self.T('ie'), self.T('mb'), self.V('maej'))
+
+        newT2['ijab'] += -np.einsum('iMbE,MaEj->ijab', self.T('iMbE'), self.W['MbEj'])
+
+        newT2['ijab'] += -np.einsum('jmae,mbei->ijab', self.T('jmae'), self.W['mbej'])
+        newT2['ijab'] += np.einsum('je,ma,mbei->ijab', self.T('je'), self.T('ma'), self.V('mbei'))
+
+        newT2['ijab'] += -np.einsum('jMaE,MbEi->ijab', self.T('jMaE'), self.W['MbEj'])
+
+        newT2['ijab'] += np.einsum('jmbe,maei->ijab', self.T('jmbe'), self.W['mbej'])
+        newT2['ijab'] += -np.einsum('je,mb,maei->ijab', self.T('je'), self.T('mb'), self.V('maei'))
+
+        newT2['ijab'] += np.einsum('jMbE,MaEi->ijab', self.T('jMbE'), self.W['MbEj'])
+
+        newT2['ijab'] += np.einsum('ie,abej->ijab', self.T('ie'), self.V('abej'))
+        newT2['ijab'] += -np.einsum('je,abei->ijab', self.T('je'), self.V('abei'))
+        newT2['ijab'] += -np.einsum('ma,mbij->ijab', self.T('ma'), self.V('mbij'))
+        newT2['ijab'] += np.einsum('mb,maij->ijab', self.T('mb'), self.V('maij'))
+
+        newT2['ijab'] *= self.D['ijab']
+
+        # Update T(IjAb)
+
+        newT2['IjAb'] += self.V('IjAb')
+        X = self.F['ae'] - 0.5*np.einsum('mb,me->be', self.T('mb'), self.F['me'])
+        newT2['IjAb'] += np.einsum('IjAe,be->IjAb', self.T('IjAe'), X)
+
+        X = self.F['AE'] - 0.5*np.einsum('MA,ME->AE', self.T('MA'), self.F['ME']) # Same X as before??
+        newT2['IjAb'] += -np.einsum('IjbE,AE->IjAb', self.T('IjbE'), X)
+
+        X = self.F['mi'] + 0.5*np.einsum('je,me->mj', self.T('je'), self.F['me']) 
+        newT2['IjAb'] += -np.einsum('ImAb,mj->IjAb', self.T('ImAb'), X)
+
+        X = self.F['MI'] + 0.5*np.einsum('IE,ME->MI', self.T('IE'), self.F['ME']) # Same?
+        newT2['IjAb'] += np.einsum('jMAb,MI->IjAb', self.T('jMAb'), X)
+
+        X = self.T('MnAb') + np.einsum('MA,nb->MnAb', self.T('MA'), self.T('nb'))
+        newT2['IjAb'] += 0.5*np.einsum('MnAb,MnIj->IjAb', X, self.W['MnIj'])
+
+        X = self.T('mNAb') - np.einsum('mb,NA->mNAb', self.T('mb'), self.T('NA'))
+        newT2['IjAb'] += 0.5*np.einsum('mNAb,mNIj->IjAb', X, self.W['mNIj'])
+
+        X = self.T('IjEf') + np.einsum('IE,jf->IjEf', self.T('IE'), self.T('jf')) 
+        newT2['IjAb'] += 0.5*np.einsum('IjEf,AbEf->IjAb', X, self.W['AbEf'])
+
+        X = self.T('IjeF') - np.einsum('IF,je->IjeF', self.T('IF'), self.T('je')) 
+        newT2['IjAb'] += 0.5*np.einsum('IjeF,AbeF->IjAb', X, self.W['AbeF'])
+
+        newT2['IjAb'] += np.einsum('IMAE,MbEj->IjAb', self.T('IMAE'), self.W['MbEj'])
+        newT2['IjAb'] += -np.einsum('IE,MA,MbEj->IjAb', self.T('IE'), self.T('MA'), self.V('MbEj'))
+
+        newT2['IjAb'] += np.einsum('ImAe,mbej->IjAb', self.T('ImAe'), self.W['mbej'])
+        
+        newT2['IjAb'] += -np.einsum('ImbE,mAEj->IjAb', self.T('ImbE'), self.W['mBEj'])
+        newT2['IjAb'] += np.einsum('IE,mb,mAEj->IjAb', self.T('IE'), self.T('mb'), self.V('mAEj'))
+
+        newT2['IjAb'] += -np.einsum('jMAe,MbeI->IjAb', self.T('jMAe'), self.W['MbeJ'])
+        newT2['IjAb'] += np.einsum('je,MA,MbeI->IjAb', self.T('je'), self.T('MA'), self.V('MbeI'))
+
+        newT2['IjAb'] += np.einsum('jmbe,mAeI->IjAb', self.T('jmbe'), self.W['mBeJ'])
+        newT2['IjAb'] += -np.einsum('je,mb,mAeI->IjAb', self.T('je'), self.T('mb'), self.V('mAeI'))
+
+        newT2['IjAb'] += np.einsum('jMbE,MAEI->IjAb', self.T('jMbE'), self.W['MBEJ'])
+
+        newT2['IjAb'] += np.einsum('IE,AbEj->IjAb', self.T('IE'), self.V('AbEj'))
+        newT2['IjAb'] += -np.einsum('je,AbeI->IjAb', self.T('je'), self.V('AbeI'))
+        newT2['IjAb'] += -np.einsum('MA,MbIj->IjAb', self.T('MA'), self.V('MbIj'))
+        newT2['IjAb'] += np.einsum('mb,mAIj->IjAb', self.T('mb'), self.V('mAIj'))
+
+        newT2['IjAb'] *= self.D['IjAb']
+
+        # Update T(IjaB)
+
+        newT2['IjaB'] += self.V('IjaB')
+        X = self.F['AE'] - 0.5*np.einsum('MB,ME->BE', self.T('MB'), self.F['ME'])
+        newT2['IjaB'] += np.einsum('IjaE,BE->IjaB', self.T('IjaE'), X)
+
+        X = self.F['ae'] - 0.5*np.einsum('ma,me->ae', self.T('ma'), self.F['me']) # Same X as before??
+        newT2['IjaB'] += -np.einsum('IjBe,ae->IjaB', self.T('IjBe'), X)
+
+        X = self.F['mi'] + 0.5*np.einsum('je,me->mj', self.T('je'), self.F['me']) 
+        newT2['IjaB'] += -np.einsum('ImaB,mj->IjaB', self.T('ImaB'), X)
+
+        X = self.F['MI'] + 0.5*np.einsum('IE,ME->MI', self.T('IE'), self.F['ME']) # Same?
+        newT2['IjaB'] += np.einsum('jMaB,MI->IjaB', self.T('jMaB'), X)
+
+        X = self.T('mNaB') + np.einsum('ma,NB->mNaB', self.T('ma'), self.T('NB'))
+        newT2['IjaB'] += 0.5*np.einsum('mNaB,mNIj->IjaB', X, self.W['mNIj'])
+
+        X = self.T('MnaB') - np.einsum('MB,na->MnaB', self.T('MB'), self.T('na'))
+        newT2['IjaB'] += 0.5*np.einsum('MnaB,MnIj->IjaB', X, self.W['MnIj'])
+
+        X = self.T('IjEf') + np.einsum('IE,jf->IjEf', self.T('IE'), self.T('jf')) 
+        newT2['IjaB'] += 0.5*np.einsum('IjEf,aBEf->IjaB', X, self.W['aBEf'])
+
+        X = self.T('IjeF') - np.einsum('IF,je->IjeF', self.T('IF'), self.T('je')) 
+        newT2['IjaB'] += 0.5*np.einsum('IjeF,aBeF->IjaB', X, self.W['aBeF'])
+
+        newT2['IjaB'] += np.einsum('ImaE,mBEj->IjaB', self.T('ImaE'), self.W['mBEj'])
+        newT2['IjaB'] += -np.einsum('IE,ma,mBEj->IjaB', self.T('IE'), self.T('ma'), self.V('mBEj'))
+
+        newT2['IjaB'] += -np.einsum('IMBE,MaEj->IjaB', self.T('IMAE'), self.W['MbEj'])
+        newT2['IjaB'] += np.einsum('IE,MB,MaEj->IjaB', self.T('IE'), self.T('MB'), self.V('MaEj'))
+
+        newT2['IjaB'] += -np.einsum('ImBe,maej->IjaB', self.T('ImBe'), self.W['mbej'])
+        
+        newT2['IjaB'] += -np.einsum('jmae,mBeI->IjaB', self.T('jmae'), self.W['mBeJ'])
+        newT2['IjaB'] += np.einsum('je,ma,mBeI->IjaB', self.T('je'), self.T('ma'), self.V('mBeI'))
+
+        newT2['IjaB'] += -np.einsum('jMaE,MBEI->IjaB', self.T('jMaE'), self.W['MBEJ'])
+
+        newT2['IjaB'] += np.einsum('jMBe,MaeI->IjaB', self.T('jMBe'), self.W['MbeJ'])
+        newT2['IjaB'] += -np.einsum('je,MB,MaeI->IjaB', self.T('je'), self.T('MB'), self.V('MaeI'))
+
+        newT2['IjaB'] += np.einsum('IE,aBEj->IjaB', self.T('IE'), self.V('aBEj'))
+        newT2['IjaB'] += -np.einsum('je,aBeI->IjaB', self.T('je'), self.V('aBeI'))
+        newT2['IjaB'] += -np.einsum('ma,mBIj->IjaB', self.T('ma'), self.V('mBIj'))
+        newT2['IjaB'] += np.einsum('MB,MaIj->IjaB', self.T('MB'), self.V('MaIj'))
+
+        newT2['IjaB'] *= self.D['IjaB']
+
+        # Update T(iJaB)
+
+        newT2['iJaB'] += self.V('iJaB')
+        X = self.F['AE'] - 0.5*np.einsum('MB,ME->BE', self.T('MB'), self.F['ME'])
+        newT2['iJaB'] += np.einsum('iJaE,BE->iJaB', self.T('iJaE'), X)
+
+        X = self.F['ae'] - 0.5*np.einsum('ma,me->ae', self.T('ma'), self.F['me']) # sAME X AS BEFORE??
+        newT2['iJaB'] += -np.einsum('iJBe,ae->iJaB', self.T('iJBe'), X)
+
+        X = self.F['MI'] + 0.5*np.einsum('JE,ME->MJ', self.T('JE'), self.F['ME']) 
+        newT2['iJaB'] += -np.einsum('iMaB,MJ->iJaB', self.T('iMaB'), X)
+
+        X = self.F['mi'] + 0.5*np.einsum('ie,me->mi', self.T('ie'), self.F['me']) # sAME?
+        newT2['iJaB'] += np.einsum('JmaB,mi->iJaB', self.T('JmaB'), X)
+
+        X = self.T('mNaB') + np.einsum('ma,NB->mNaB', self.T('ma'), self.T('NB'))
+        newT2['iJaB'] += 0.5*np.einsum('mNaB,mNiJ->iJaB', X, self.W['mNiJ'])
+
+        X = self.T('MnaB') - np.einsum('MB,na->MnaB', self.T('MB'), self.T('na'))
+        newT2['iJaB'] += 0.5*np.einsum('MnaB,MniJ->iJaB', X, self.W['MniJ'])
+
+        X = self.T('iJeF') + np.einsum('ie,JF->iJeF', self.T('ie'), self.T('JF')) 
+        newT2['iJaB'] += 0.5*np.einsum('iJeF,aBeF->iJaB', X, self.W['aBeF'])
+
+        X = self.T('iJEf') - np.einsum('if,JE->iJEf', self.T('if'), self.T('JE')) 
+        newT2['iJaB'] += 0.5*np.einsum('iJEf,aBEf->iJaB', X, self.W['aBEf'])
+
+        newT2['iJaB'] += np.einsum('imae,mBeJ->iJaB', self.T('imae'), self.W['mBeJ'])
+        newT2['iJaB'] += -np.einsum('ie,ma,mBeJ->iJaB', self.T('ie'), self.T('ma'), self.V('mBeJ'))
+
+        newT2['iJaB'] += np.einsum('iMaE,MBEJ->iJaB', self.T('iMaE'), self.W['MBEJ'])
+        
+        newT2['iJaB'] += -np.einsum('iMBe,MaeJ->iJaB', self.T('iMBe'), self.W['MbeJ'])
+        newT2['iJaB'] += np.einsum('ie,MB,MaeJ->iJaB', self.T('ie'), self.T('MB'), self.V('MaeJ'))
+
+        newT2['iJaB'] += -np.einsum('JmaE,mBEi->iJaB', self.T('JmaE'), self.W['mBEj'])
+        newT2['iJaB'] += np.einsum('JE,ma,mBEi->iJaB', self.T('JE'), self.T('ma'), self.V('mBEi'))
+
+        newT2['iJaB'] += np.einsum('JMBE,MaEi->iJaB', self.T('JMBE'), self.W['MbEj'])
+        newT2['iJaB'] += -np.einsum('JE,MB,MaEi->iJaB', self.T('JE'), self.T('MB'), self.V('MaEi'))
+
+        newT2['iJaB'] += np.einsum('JmBe,maei->iJaB', self.T('JmBe'), self.W['mbej'])
+
+        newT2['iJaB'] += np.einsum('ie,aBeJ->iJaB', self.T('ie'), self.V('aBeJ'))
+        newT2['iJaB'] += -np.einsum('JE,aBEi->iJaB', self.T('JE'), self.V('aBEi'))
+        newT2['iJaB'] += -np.einsum('ma,mBiJ->iJaB', self.T('ma'), self.V('mBiJ'))
+        newT2['iJaB'] += np.einsum('MB,MaiJ->iJaB', self.T('MB'), self.V('MaiJ'))
+
+        newT2['iJaB'] *= self.D['iJaB']
+
+        # Update T(iJAb)
+
+        newT2['iJAb'] += self.V('iJAb')
+        X = self.F['ae'] - 0.5*np.einsum('mb,me->be', self.T('mb'), self.F['me'])
+        newT2['iJAb'] += np.einsum('iJAe,be->iJAb', self.T('iJAe'), X)
+
+        X = self.F['AE'] - 0.5*np.einsum('MA,ME->AE', self.T('MA'), self.F['ME']) # sAME X AS BEFORE??
+        newT2['iJAb'] += -np.einsum('iJbE,AE->iJAb', self.T('iJbE'), X)
+
+        X = self.F['MI'] + 0.5*np.einsum('JE,ME->MJ', self.T('JE'), self.F['ME']) 
+        newT2['iJAb'] += -np.einsum('iMAb,MJ->iJAb', self.T('iMAb'), X)
+
+        X = self.F['mi'] + 0.5*np.einsum('ie,me->mi', self.T('ie'), self.F['me']) # sAME?
+        newT2['iJAb'] += np.einsum('JmAb,mi->iJAb', self.T('JmAb'), X)
+
+        X = self.T('MnAb') + np.einsum('MA,nb->MnAb', self.T('MA'), self.T('nb'))
+        newT2['iJAb'] += 0.5*np.einsum('MnAb,MniJ->iJAb', X, self.W['MniJ'])
+
+        X = self.T('mNAb') - np.einsum('mb,NA->mNAb', self.T('mb'), self.T('NA'))
+        newT2['iJAb'] += 0.5*np.einsum('mNAb,mNiJ->iJAb', X, self.W['mNiJ'])
+
+        X = self.T('iJeF') + np.einsum('ie,JF->iJeF', self.T('ie'), self.T('JF')) 
+        newT2['iJAb'] += 0.5*np.einsum('iJeF,AbeF->iJAb', X, self.W['AbeF'])
+
+        X = self.T('iJEf') - np.einsum('if,JE->iJEf', self.T('if'), self.T('JE')) 
+        newT2['iJAb'] += 0.5*np.einsum('iJEf,AbEf->iJAb', X, self.W['AbEf'])
+
+        newT2['iJAb'] += np.einsum('iMAe,MbeJ->iJAb', self.T('iMAe'), self.W['MbeJ'])
+        newT2['iJAb'] += -np.einsum('ie,MA,MbeJ->iJAb', self.T('ie'), self.T('MA'), self.V('MbeJ'))
+
+        newT2['iJAb'] += -np.einsum('imbe,mAeJ->iJAb', self.T('imae'), self.W['mBeJ'])
+        newT2['iJAb'] += np.einsum('ie,mb,mAeJ->iJAb', self.T('ie'), self.T('mb'), self.V('mAeJ'))
+
+        newT2['iJAb'] += -np.einsum('iMbE,MAEJ->iJAb', self.T('iMbE'), self.W['MBEJ'])
+        
+        newT2['iJAb'] += -np.einsum('JMAE,MbEi->iJAb', self.T('JMAE'), self.W['MbEj'])
+        newT2['iJAb'] += np.einsum('JE,MA,MbEi->iJAb', self.T('JE'), self.T('MA'), self.V('MbEi'))
+
+        newT2['iJAb'] += -np.einsum('JmAe,mbei->iJAb', self.T('JmAe'), self.W['mbej'])
+
+        newT2['iJAb'] += np.einsum('JmbE,mAEi->iJAb', self.T('JmbE'), self.W['mBEj'])
+        newT2['iJAb'] += -np.einsum('JE,mb,mAEi->iJAb', self.T('JE'), self.T('mb'), self.V('mAEi'))
+
+        newT2['iJAb'] += np.einsum('ie,AbeJ->iJAb', self.T('ie'), self.V('AbeJ'))
+        newT2['iJAb'] += -np.einsum('JE,AbEi->iJAb', self.T('JE'), self.V('AbEi'))
+        newT2['iJAb'] += -np.einsum('MA,MbiJ->iJAb', self.T('MA'), self.V('MbiJ'))
+        newT2['iJAb'] += np.einsum('mb,mAiJ->iJAb', self.T('mb'), self.V('mAiJ'))
+
+        newT2['iJAb'] *= self.D['iJAb']
+
+        # Compute RMS
+
+        self.rms1['IA'] = np.sqrt(np.sum(np.square(newT1['IA'] - self.T1amp['IA'] )))/(self.nalpha*self.avir)
+        self.rms1['ia'] = np.sqrt(np.sum(np.square(newT1['ia'] - self.T1amp['ia'] )))/(self.nbeta*self.bvir)
+
+        self.rms2['IJAB'] = np.sqrt(np.sum(np.square(newT2['IJAB'] - self.T2amp['IJAB'] )))/(self.nalpha*self.nalpha*self.avir*self.avir)
+        self.rms2['ijab'] = np.sqrt(np.sum(np.square(newT2['ijab'] - self.T2amp['ijab'] )))/(self.nbeta*self.nbeta*self.bvir*self.bvir)
+        self.rms2['IjAb'] = np.sqrt(np.sum(np.square(newT2['IjAb'] - self.T2amp['IjAb'] )))/(self.nalpha*self.nbeta*self.avir*self.bvir)
+        self.rms2['iJaB'] = np.sqrt(np.sum(np.square(newT2['iJaB'] - self.T2amp['iJaB'] )))/(self.nalpha*self.nbeta*self.avir*self.bvir)
+        self.rms2['IjaB'] = np.sqrt(np.sum(np.square(newT2['IjaB'] - self.T2amp['IjaB'] )))/(self.nalpha*self.nbeta*self.avir*self.bvir)
+        self.rms2['iJAb'] = np.sqrt(np.sum(np.square(newT2['iJAb'] - self.T2amp['iJAb'] )))/(self.nalpha*self.nbeta*self.avir*self.bvir)
+
+        # Save new amplitudes
+
+        self.T1amp = newT1
+        self.T2amp = newT2
+
     def __init__(self, wfn, CC_CONV=6, CC_MAXITER=50, E_CONV=8):
         self.Ehf = wfn.energy() 
         self.nmo = wfn.nmo()
@@ -444,6 +833,10 @@ class CCSD:
         self.fda = np.asarray(wfn.epsilon_a())
         self.fdb = np.asarray(wfn.epsilon_b())
         self.Vnuc = wfn.molecule().nuclear_repulsion_energy()
+
+        self.CC_CONV = CC_CONV
+        self.E_CONV = E_CONV
+        self.CC_MAXITER = CC_MAXITER
 
         print("Number of alpha electrons:   {}".format(self.nalpha))
         print("Number of beta electrons:    {}".format(self.nbeta))
@@ -534,15 +927,55 @@ class CCSD:
 
         # Get MP2 energy
 
-        Emp2 = self.Ehf
-        Emp2 += (1.0/4.0)*np.einsum('ijab,ijab->', self.T('IJAB'), self.V('IJAB'))
-        Emp2 += (1.0/4.0)*np.einsum('ijab,ijab->', self.T('ijab'), self.V('ijab'))
-        Emp2 += np.einsum('ijab,ijab->', self.T('IjAb'), self.V('IjAb'))
+        self.Ecc = (1.0/4.0)*np.einsum('ijab,ijab->', self.T('IJAB'), self.V('IJAB'))
+        self.Ecc += (1.0/4.0)*np.einsum('ijab,ijab->', self.T('ijab'), self.V('ijab'))
+        self.Ecc += np.einsum('ijab,ijab->', self.T('IjAb'), self.V('IjAb'))
 
-        print('MP2 Energy:   {:<15.10f}'.format(Emp2))
+        print('MP2 Energy:   {:<15.10f}'.format(self.Ecc + self.Ehf))
 
-        for i in range(0,21):
+        self.rms1 = {
+        'IA' : 0.0,
+        'ia' : 0.0
+        }
+
+        # Initial T2 amplitudes
+
+        self.rms2 = {
+        'IJAB' : 0.0,
+        'ijab' : 0.0,
+        'IjAb' : 0.0,
+        'IjaB' : 0.0,
+        'iJaB' : 0.0,
+        'iJAb' : 0.0
+        }
+
+        max_rms = 1
+        dE = 1
+        ite = 1
+
+        rms_LIM = 10**(-self.CC_CONV)
+        E_LIM = 10**(-self.E_CONV)
+        f = False
+        t0 = time.time()
+        while abs(dE) > E_LIM or max_rms > rms_LIM:
+            t = time.time()
+            if ite > self.CC_MAXITER:
+                raise NameError('CC equations did not converge')
             self.update_Fint()
             self.update_Winf()        
+            self.update_amp()
+            dE = -self.Ecc
             self.update_energy()
-            print(self.Ecc + self.Ehf)
+            dE += self.Ecc
+            max_rms = max(self.rms1[max(self.rms1)], self.rms2[max(self.rms2)])
+            ite += 1
+            print('-'*50)
+            print("Iteration {}".format(ite))
+            print("CC Correlation energy: {:<15.10f}".format(self.Ecc))
+            print("Energy change:         {:<15.10f}".format(dE))
+            print("Max RMS residue:       {:<15.10f}".format(max_rms))
+            print("Time required:         {:<15.10f}".format(time.time() - t))
+            print('-'*50)
+
+        print('CC Energy:   {:<15.10f}'.format(self.Ecc + self.Ehf))
+        print('CCSD iterations took %.2f seconds.\n' % (time.time() - t0))

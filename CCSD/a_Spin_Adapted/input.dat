@@ -1,15 +1,14 @@
 from CCSD import CCSD
 
 molecule mol {
-    1 2
+    0 2
     O
-    H 1 0.9
-    H 1 0.9 2 104.5
+    H 1 0.96
     symmetry c1
 }
 
 set {
-    BASIS         cc-pvdz
+    BASIS         cc-pvtz
     REFERENCE     UHF
     SCF_TYPE      PK
     E_CONVERGENCE 12
@@ -17,5 +16,6 @@ set {
 
 e, wfn = energy('scf', return_wfn=True)
 
-X = CCSD(wfn)
-energy('ccsd')
+X = CCSD(wfn, CC_CONV = 8, E_CONV = 10)
+e = energy('ccsd')
+print('Psi4 Energy: {:<15.10f}'.format(e))
