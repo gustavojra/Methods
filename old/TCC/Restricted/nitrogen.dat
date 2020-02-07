@@ -1,0 +1,30 @@
+import os
+import sys
+import numpy as np
+from TCCSD import TCCSD
+
+molecule mol {
+    unit bohr
+    0 1
+    N 
+    N 1 2.074
+    symmetry c1
+}
+
+set {
+    BASIS         cc-pvdz
+    REFERENCE     RHF
+    SCF_TYPE      PK
+    SOSCF         True
+    E_CONVERGENCE 8
+    MAXITER       100
+    MAX_ATTEMPTS  10
+    GUESS         READ
+}
+
+X = TCCSD(mol)
+
+X.TCCSD([4,5,6,7,8,9], CC_CONV=8)
+
+print('CAS energy:   {:<5.10f}'.format(X.Ecas))
+print('CCSD Energy: {:<5.10f}'.format(energy('ccsd')))

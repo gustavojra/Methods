@@ -1,0 +1,40 @@
+import sys
+sys.path.append('../../../Modules/')
+from CASCCSD import CASCCSD
+from save_amp import *
+from printtensor import *
+
+molecule mol {
+    unit bohr
+    0 1
+    N 
+    N 1 2.48880
+    symmetry c1
+}
+
+set {
+    BASIS         cc-pvdz
+    REFERENCE     RHF
+    SCF_TYPE      PK
+    SOSCF         True
+    E_CONVERGENCE 12
+    MAXITER       100
+    MAX_ATTEMPTS  10
+    NUM_DETS_PRINT 100000
+    FCI True
+}
+
+set FROZEN_DOCC = [4.0]
+set ACTIVE = [6]
+
+e, wfn = energy('detci', return_wfn=True)
+h = 7  
+p = 21
+
+amp = (read_T1(h,p), read_T2(h,p))
+
+X = CASCCSD(wfn, CC_MAXITER=300, read_amp=amp, RELAX_T3T1=False)
+
+print_out('@@@ R/Re = 1.2')
+print_out('\n@@@ Final CASCI   energy: {:<5.10f}\n'.format(e))
+print_out('@@@ Final CASCCSD   energy: {:<5.10f}\n'.format(X.Ecc))

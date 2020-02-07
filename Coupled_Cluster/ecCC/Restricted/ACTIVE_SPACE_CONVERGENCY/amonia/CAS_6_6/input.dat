@@ -1,0 +1,37 @@
+import sys
+sys.path.append('../../Modules/')
+from TCCSD import TCCSD
+from CASCCSD import CASCCSD
+
+molecule mol {
+    0 1
+    N        0.7925912914      2.1692994885     -0.0142926884                 
+    H        1.8356997089      2.1556543697      0.0010424292                 
+    H        0.4545683628      2.4629319048      0.9280538665                 
+    H        0.4545639115      1.1992019097     -0.1963519496      
+    symmetry c1
+}
+
+set {
+    BASIS         6-31g
+    REFERENCE     RHF
+    SCF_TYPE      PK
+    SOSCF         True
+    E_CONVERGENCE 12
+    MAXITER       100
+    MAX_ATTEMPTS  10
+    NUM_DETS_PRINT 450000
+    FCI True
+}
+
+set FROZEN_DOCC = [2.0]
+set ACTIVE = [6]
+
+e, wfn = energy('detci', return_wfn=True)
+Y = TCCSD(wfn, CC_MAXITER=300)
+X = CASCCSD(wfn, CC_MAXITER=300)
+
+print_out('@@@ CAS = (6,6)')
+print_out('\n@@@ Final CASCI   energy: {:<5.10f}\n'.format(e))
+print_out('@@@ Final TCCSD   energy: {:<5.10f}\n'.format(Y.Ecc))
+print_out('@@@ Final CASCCSD   energy: {:<5.10f}\n'.format(X.Ecc))

@@ -1,0 +1,33 @@
+import os
+import sys
+import numpy as np
+from HTCCSD import HTCCSD
+
+molecule mol {
+    0 1
+    H       -4.2523180199      2.2841937137      0.0103070289                 
+    H       -4.2454531865      1.5763185292     -0.0008415103                 
+    H       -7.0858409784      2.3178981468     -0.1093346282                 
+    H       -7.0826153072      1.6171370497     -0.0084233837   
+    symmetry c1
+}
+
+set {
+    BASIS         3-21g
+    REFERENCE     RHF
+    SCF_TYPE      PK
+    SOSCF         True
+    E_CONVERGENCE 12
+    MAXITER       100
+    MAX_ATTEMPTS  10
+    GUESS         READ
+    R_CONVERGENCE 10
+}
+
+X = HTCCSD(mol)
+
+X.HTCCSD('full', CC_CONV=12)
+
+print('CAS energy:   {:<5.10f}'.format(X.Ecas))
+print('CCSD Energy:  {:<5.10f}'.format(energy('ccsd')))
+#print('CCSDT (MRCC): -5.7381125680')

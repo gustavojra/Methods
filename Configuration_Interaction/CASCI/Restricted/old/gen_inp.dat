@@ -1,0 +1,34 @@
+import os
+import sys
+import numpy as np
+from CAS import CAS
+
+molecule mol {
+    0 1
+    He 
+    He 1 2.0
+    symmetry c1
+}
+
+set {
+    BASIS         3-21g
+    REFERENCE     RHF
+    SCF_TYPE      PK
+    SOSCF         True
+    E_CONVERGENCE 10
+}
+
+x = CAS(mol)
+
+x.CAS('full')
+
+out = '{} {} {} {}'.format(len(x.determinants), x.nmo, int(x.nelec/2), int(x.nelec/2))
+out += '\n'
+
+for c,det in zip(x.Ccas, x.determinants):
+    out += '{:< 5.10f}'.format(c) + ' ' + det.alpha_string()[::-1] + ' ' + det.beta_string()[::-1] + '\n'
+
+fle = open('wfs.det', 'w')
+fle.write(out)
+fle.close()
+

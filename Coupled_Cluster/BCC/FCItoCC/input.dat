@@ -1,0 +1,22 @@
+from CASCI import CASCI
+
+molecule mol {
+    0 1
+    O
+    H 1 R
+    H 1 R 2 104.5
+    R = 1.0
+    symmetry c1
+}
+
+set {
+    BASIS         sto-3g
+    REFERENCE     RHF
+    SCF_TYPE      PK
+    E_CONVERGENCE 12
+    MAXITER       100
+    MAX_ATTEMPTS  10
+    FCI           True
+}
+
+CASCI('full', rot=True, ccsd=False, ccd=True)

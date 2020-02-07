@@ -1,0 +1,23 @@
+import os
+import sys
+import numpy as np
+from TCCSD import *
+
+molecule mol {
+   0 2
+   He
+   H 1 1.0
+   symmetry c1
+}
+
+set {
+    BASIS         3-21g
+    REFERENCE     uhf
+    SCF_TYPE      pk
+    E_CONVERGENCE 8
+    MAXITER       50
+}
+
+X = TCCSD(mol)
+X.CAS('aaaa')
+print(X.Escf)

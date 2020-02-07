@@ -1,0 +1,24 @@
+import os
+import sys
+import numpy as np
+from CAS import CAS
+
+molecule mol {
+    0 1
+    O
+    H 1 1.0
+    H 1 1.0 2 104.5
+    symmetry c1
+}
+
+set {
+    BASIS         sto-3g
+    REFERENCE     RHF
+    SCF_TYPE      PK
+    SOSCF         True
+    E_CONVERGENCE 8
+}
+
+x = CAS(mol)
+
+x.CAS('full')

@@ -1,0 +1,37 @@
+molecule mol {
+    unit bohr
+    0 1
+    H
+    H 1 a
+    H 1 a 2 X 
+    H 2 a 1 X 3 0.0
+    symmetry c1
+
+    a = 2.0
+}
+
+set {
+    BASIS         cc-pvdz
+    REFERENCE     RHF
+    SCF_TYPE      PK
+    SOSCF         True
+    E_CONVERGENCE 12
+    MAXITER       100
+    MAX_ATTEMPTS  10
+    FCI True
+}
+
+alphas = [0, 0.05, 0.1, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50]
+PES = []
+
+for a in alphas:
+    mol.X = 180*a + 90
+    mol.update_geometry()
+    E = energy('mrccsdt(q)')
+    PES.append((a, E))
+
+print_out('\n Energy as a function of alpha\n')
+for point in PES:
+    print_out('\t%5.1f%20.10f' % (point[0], point[1]))
+    print_out('\n')
+
