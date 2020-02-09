@@ -73,7 +73,7 @@ class CCSD:
         self.Ecc += np.einsum('ia,ia->', self.fock_ov, self.T1['ia'])
     
         X = self.T2['IJAB'] + 2*np.einsum('IA,JB->IJAB', self.T1['IA'], self.T1['IA'])
-        self.Ecc += (1.0/4.0)*np.einsum('IJAB,IJAB->', X, self.Vint['OOVV'])
+        self.Ecc += (1.0/4.0)*np.einsum('IJAB,IJAB->', X, self.V('IJAB'))
     
         X = self.T2['ijab'] + 2*np.einsum('ia,jb->ijab', self.T1['ia'], self.T1['ia'])
         self.Ecc += (1.0/4.0)*np.einsum('ijab,ijab->', X, self.V('ijab'))
@@ -90,11 +90,11 @@ class CCSD:
         # Update F(AE)
         self.F.update({'AE' : np.zeros((self.avir, self.avir))})
         self.F['AE'] += self.fock_VV - 0.5*np.einsum('ME,MA->AE', self.fock_OV, self.T1['IA'])
-        self.F['AE'] += np.einsum('MF,EFAM->AE', self.T1['IA'], self.Vint['OOOV'])
+        self.F['AE'] += np.einsum('MF,AMEF->AE', self.T1['IA'], self.V('AMEF'))
         self.F['AE'] += np.einsum('mf,AmEf->AE', self.T1['ia'], self.V('AmEf'))
 
         X = self.T2['IJAB'] + 0.5*np.einsum('MA,NF->MNAF', self.T1['IA'], self.T1['IA']) - 0.5*np.einsum('MF,NA->MNAF', self.T1['IA'], self.T1['IA'])
-        self.F['AE'] += -0.5*np.einsum('MNAF,MNEF->AE', X, self.Vint['OOVV'])
+        self.F['AE'] += -0.5*np.einsum('MNAF,MNEF->AE', X, self.V('MNEF'))
 
         X = self.T2['IjAb'] + 0.5*np.einsum('MA,nf->MnAf', self.T1['IA'], self.T1['ia'])
         self.F['AE'] += -np.einsum('MnAf,MnEf->AE', X, self.V('MnEf'))
@@ -114,11 +114,11 @@ class CCSD:
         # Update F(MI)
         self.F.update({'MI' : np.zeros((self.nalpha, self.nalpha))})
         self.F['MI'] += self.fock_OO + 0.5*np.einsum('ME,IE->MI', self.fock_OV, self.T1['IA'])
-        self.F['MI'] += np.einsum('NE,MNIE->MI', self.T1['IA'], self.Vint['OOOV'])
+        self.F['MI'] += np.einsum('NE,MNIE->MI', self.T1['IA'], self.V('MNIE'))
         self.F['MI'] += np.einsum('ne,MnIe->MI', self.T1['ia'], self.V('MnIe'))
 
         X = self.T2['IJAB'] + 0.5*np.einsum('IE,NF->INEF', self.T1['IA'], self.T1['IA']) - 0.5*np.einsum('IF,NE->INEF', self.T1['IA'], self.T1['IA'])
-        self.F['MI'] += +0.5*np.einsum('INEF,MNEF->MI', X, self.Vint['OOVV'])
+        self.F['MI'] += +0.5*np.einsum('INEF,MNEF->MI', X, self.V('MNEF'))
 
         X = self.T2['IjAb'] + 0.5*np.einsum('IE,nf->InEf', self.T1['IA'], self.T1['ia'])
         self.F['MI'] += np.einsum('InEf,MnEf->MI', X, self.V('MnEf'))
@@ -137,7 +137,7 @@ class CCSD:
 
         # Update F(ME)
         self.F.update({'ME' : np.zeros((self.nalpha, self.avir))})
-        self.F['ME'] += self.fock_OV + np.einsum('NF, MNEF-> ME', self.T1['IA'], self.Vint['OOVV']) + np.einsum('nf, MnEf-> ME', self.T1['ia'], self.V('MnEf'))
+        self.F['ME'] += self.fock_OV + np.einsum('NF, MNEF-> ME', self.T1['IA'], self.V('MNEF')) + np.einsum('nf, MnEf-> ME', self.T1['ia'], self.V('MnEf'))
 
         # Update F(me)
         self.F.update({'me' : np.zeros((self.nbeta, self.bvir))})
@@ -151,10 +151,10 @@ class CCSD:
         # Update W(MNIJ)
         self.W.update({'MNIJ' : np.zeros((self.nalpha, self.nalpha, self.nalpha, self.nalpha))})
         self.W['MNIJ'] += self.Vint['OOOO']
-        self.W['MNIJ'] += np.einsum('JE, MNIE-> MNIJ', self.T1['IA'], self.Vint['OOOV'])
-        self.W['MNIJ'] += -np.einsum('IE, MNJE-> MNIJ', self.T1['IA'], self.Vint['OOOV'])
+        self.W['MNIJ'] += np.einsum('JE, MNIE-> MNIJ', self.T1['IA'], self.V('MNIE'))
+        self.W['MNIJ'] += -np.einsum('IE, MNJE-> MNIJ', self.T1['IA'], self.V('MNJE'))
         X = self.T2['IJAB'] + np.einsum('IE,JF->IJEF', self.T1['IA'], self.T1['IA']) - np.einsum('IF,JE->IJEF', self.T1['IA'], self.T1['IA'])
-        self.W['MNIJ'] += (1.0/4.0)*np.einsum('IJEF,MNEF->MNIJ', X, self.Vint['OOVV'])
+        self.W['MNIJ'] += (1.0/4.0)*np.einsum('IJEF,MNEF->MNIJ', X, self.V('MNEF'))
 
         # Update W(mnij)
         self.W.update({'mnij' : np.zeros((self.nbeta, self.nbeta, self.nbeta, self.nbeta))})
@@ -174,11 +174,11 @@ class CCSD:
 
         # Update W(ABEF)
         self.W.update({'ABEF' : np.zeros((self.avir, self.avir, self.avir, self.avir))})
-        self.W['ABEF'] += self.Vint['VVVV']
+        self.W['ABEF'] += self.V('ABEF')
         self.W['ABEF'] += -np.einsum('MB, AMEF-> ABEF', self.T1['IA'], self.V('AMEF'))
         self.W['ABEF'] += np.einsum('MA, BMEF-> ABEF', self.T1['IA'], self.V('BMEF'))
         X = self.T2['IJAB'] + np.einsum('MA,NB->MNAB', self.T1['IA'], self.T1['IA']) - np.einsum('MB,NA->MNAB', self.T1['IA'], self.T1['IA'])
-        self.W['ABEF'] += (1.0/4.0)*np.einsum('MNAB,MNEF->ABEF', X, self.Vint['OOVV'])
+        self.W['ABEF'] += (1.0/4.0)*np.einsum('MNAB,MNEF->ABEF', X, self.V('MNEF'))
 
         # Update W(abef)
         self.W.update({'abef' : np.zeros((self.bvir, self.bvir, self.bvir, self.bvir))})
@@ -198,11 +198,11 @@ class CCSD:
 
         # Update W(MBEJ)
         self.W.update({'MBEJ' : np.zeros((self.nalpha, self.avir, self.avir, self.nalpha))})
-        self.W['MBEJ'] += self.Vint['OVVO']
-        self.W['MBEJ'] += np.einsum('JF,MBEF->MBEJ', self.T1['IA'], self.Vint['OVVV'])
+        self.W['MBEJ'] += self.V('MBEJ')
+        self.W['MBEJ'] += np.einsum('JF,MBEF->MBEJ', self.T1['IA'], self.V('MBEF'))
         self.W['MBEJ'] += -np.einsum('NB,MNEJ->MBEJ', self.T1['IA'], self.V('MNEJ'))
         X = 0.5*self.T2['IJAB'] + np.einsum('JF,NB->JNFB', self.T1['IA'], self.T1['IA'])
-        self.W['MBEJ'] += -np.einsum('JNFB,MNEF->MBEJ', X, self.Vint['OOVV'])
+        self.W['MBEJ'] += -np.einsum('JNFB,MNEF->MBEJ', X, self.V('MNEF'))
         self.W['MBEJ'] += 0.5*np.einsum('JnBf,MnEf->MBEJ', self.T2['IjAb'], self.V('MnEf'))
 
         # Update W(mbej)
@@ -221,7 +221,7 @@ class CCSD:
         self.W['MbEj'] += -np.einsum('nb,MnEj->MbEj', self.T1['ia'], self.V('MnEj'))
         X = 0.5*self.T2['ijab'] + np.einsum('jf,nb->jnfb', self.T1['ia'], self.T1['ia'])
         self.W['MbEj'] += -np.einsum('jnfb,MnEf->MbEj', X, self.V('MnEf'))
-        self.W['MbEj'] += 0.5*np.einsum('NjFb,MNEF->MbEj', self.T2['IjAb'], self.Vint['OOVV'])
+        self.W['MbEj'] += 0.5*np.einsum('NjFb,MNEF->MbEj', self.T2['IjAb'], self.V('MNEF'))
 
         # Update W(MbeJ)
         self.W.update({'MbeJ' : np.zeros((self.nalpha, self.bvir, self.bvir, self.nalpha))})
@@ -271,7 +271,7 @@ class CCSD:
         newT1['IA'] += np.einsum('ImAe,me->IA', self.T2['IjAb'], self.F['me'])
         newT1['IA'] += np.einsum('ME,AMIE->IA', self.T1['IA'], self.V('AMIE'))
         newT1['IA'] += np.einsum('me,AmIe->IA', self.T1['ia'], self.V('AmIe'))
-        newT1['IA'] += -0.5*np.einsum('MNAE,MNIE->IA', self.T2['IJAB'], self.Vint['OOOV'])
+        newT1['IA'] += -0.5*np.einsum('MNAE,MNIE->IA', self.T2['IJAB'], self.V('MNIE'))
         newT1['IA'] += -np.einsum('MnAe,MnIe->IA', self.T2['IjAb'], self.V('MnIe'))
         newT1['IA'] += 0.5*np.einsum('IMEF,AMEF->IA', self.T2['IJAB'], self.V('AMEF'))
         newT1['IA'] += np.einsum('ImEf,AmEf->IA', self.T2['IjAb'], self.V('AmEf'))
@@ -293,7 +293,7 @@ class CCSD:
 
         # Update T(IJAB)
 
-        newT2['IJAB'] += self.Vint['OOVV']
+        newT2['IJAB'] += self.V('IJAB')
         X = self.T2['IJAB'] + np.einsum('MA,NB->MNAB', self.T1['IA'], self.T1['IA']) - np.einsum('MB,NA->MNAB', self.T1['IA'], self.T1['IA'])
         newT2['IJAB'] += 0.5*np.einsum('MNAB,MNIJ->IJAB', X, self.W['MNIJ'])
 
@@ -301,13 +301,13 @@ class CCSD:
         newT2['IJAB'] += 0.5*np.einsum('IJEF,ABEF->IJAB', X, self.W['ABEF'])
 
         X = self.F['AE'] - 0.5*np.einsum('MB,ME->BE', self.T1['IA'], self.F['ME'])
-        Pab = np.einsum('IJAE,BE->IJAB', self.T2['IJAB'], X) - np.einsum('MA,IJMB->IJAB', self.T1['IA'], self.Vint['OOOV'])
+        Pab = np.einsum('IJAE,BE->IJAB', self.T2['IJAB'], X) - np.einsum('MA,MBIJ->IJAB', self.T1['IA'], self.V('MBIJ'))
 
         X = self.F['MI'] + 0.5*np.einsum('JE,ME->MJ', self.T1['IA'], self.F['ME']) 
         Pij = -np.einsum('IMAB,MJ->IJAB', self.T2['IJAB'], X) + np.einsum('IE,ABEJ->IJAB', self.T1['IA'], self.V('ABEJ'))
 
         Pijab  =  np.einsum('IMAE,MBEJ->IJAB', self.T2['IJAB'], self.W['MBEJ'])
-        Pijab += -np.einsum('IE,MA,MBEJ->IJAB', self.T1['IA'], self.T1['IA'], self.Vint['OVVO'])
+        Pijab += -np.einsum('IE,MA,MBEJ->IJAB', self.T1['IA'], self.T1['IA'], self.V('MBEJ'))
         Pijab += np.einsum('ImAe,mBeJ->IJAB', self.T2['IjAb'], self.W['mBeJ'])
 
         newT2['IJAB'] += Pab + Pij + Pijab - (Pab + Pijab).transpose(0,1,3,2) - (Pij + Pijab).transpose(1,0,2,3) + Pijab.transpose(1,0,3,2)
@@ -479,14 +479,8 @@ class CCSD:
         self.Vbaab = - Vbbaa.transpose(0,3,2,1)
 
         Vaaaa = Vaaaa.swapaxes(1,2)
-        Vaaaa = Vaaaa - Vaaaa.swapaxes(2,3)
         self.Vint = {
-            'OOOO' : Vaaaa[oa,oa,oa,oa],
-            'OOOV' : Vaaaa[oa,oa,oa,va],
-            'OOVV' : Vaaaa[oa,oa,va,va],
-            'OVVO' : Vaaaa[oa,va,va,oa],
-            'OVVV' : Vaaaa[oa,va,va,va],
-            'VVVV' : Vaaaa[va,va,va,va],
+            'OOOO' : (Vaaaa - Vaaaa.swapaxes(2,3))[oa,oa,oa,oa],
         }
 
         self.compute()
@@ -517,7 +511,7 @@ class CCSD:
         # Initial T2 amplitudes
 
         self.T2 = {
-        'IJAB' : self.D['IJAB']*self.Vint['OOVV'],
+        'IJAB' : self.D['IJAB']*self.V('IJAB'),
         'ijab' : self.D['ijab']*self.V('ijab'),
         'IjAb' : self.D['IjAb']*self.V('IjAb'),
         }
