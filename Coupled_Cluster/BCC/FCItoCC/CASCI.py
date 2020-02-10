@@ -8,7 +8,7 @@ import psi4
 import scipy.linalg as sp
 from itertools import permutations
 
-file_dir = os.path.dirname('../../Aux/')
+file_dir = os.path.dirname('../../../Aux/')
 sys.path.append(file_dir)
 
 import tools as tool
@@ -47,6 +47,52 @@ from Htools import *
 ##                                                                          ##
 ##############################################################################
 ##############################################################################
+
+def inner(u,v, S_ao):
+    return np.einsum('u,v,uv->', u, v, S_ao)
+
+def proj(u, v, S_ao):
+    return (inner(v,u, S_ao)/inner(u,u,S_ao))*u
+
+def normalize(u, S_ao):
+    return u/np.sqrt(inner(u,u, S_ao))
+
+def gram_schmidt(C, S_ao):
+    Cout = []
+    for V in C.T:
+        newV = V
+        for Vn in Cout:
+            newV -= proj(Vn,V, S_ao)
+        newV = normalize(newV, S_ao)
+        Cout.append(newV)  
+    return np.array(Cout).T
+
+def unitary(C, T1, ndocc, nvir, mints):
+    X = np.block([
+                 [ np.zeros([ndocc, ndocc]), np.zeros_like(T1)],
+                 [ T1.T, np.zeros([nvir, nvir])]])
+    
+    U = sp.expm(X - X.T)
+    C = C.np
+    C = C.dot(U)
+    C = psi4.core.Matrix.from_array(C)
+
+    return C
+
+def thouless(C, T1, ndocc, nvir, mints):
+    o = slice(0,ndocc)
+    v = slice(ndocc, ndocc+nvir)
+    C = C.np
+    Cocc = copy.deepcopy(C[:,o])
+    Cvir = copy.deepcopy(C[:,v])
+
+    C[:,o] = Cocc + np.einsum('ua,ia->ui', Cvir, T1)
+    C[:,v] = Cvir - np.einsum('ui,ia->ua', Cocc, T1)
+
+    S_ao = np.array(mints.ao_overlap())
+    C = gram_schmidt(C, S_ao)
+    C = psi4.core.Matrix.from_array(C)
+    return C
 
 def get_fock(h, V, ndocc):
     o = slice(0,ndocc)
@@ -141,7 +187,7 @@ def compute(active_space, OEI, ERI, nelec, ndocc, nvir, verb = False):
 
     return Ecas, Ccas, ref, determinants
          
-def CASCI(active_space, davidson = False, rot = False, ccsd = False, ccd = False):
+def CASCI(active_space, davidson = False, rot = False, rot_method = 1, ccsd = False, ccd = False):
 
     print('\n --------- CASCI STARTED --------- \n')
 
@@ -236,22 +282,18 @@ def CASCI(active_space, davidson = False, rot = False, ccsd = False, ccd = False
         print('='*30)
         ite = 1
 
-    while rot and np.max(abs(T1)) > 1.e-8:
+    while rot and np.max(abs(T1)) > 1.e-12:
 
-        X = np.block([
-                     [ np.zeros([ndocc, ndocc]), np.zeros_like(T1)],
-                     [ T1.T, np.zeros([nvir, nvir])]])
-
-        U = sp.expm(X - X.T)
-
-        C = C.np
-
-        C = C.dot(U)
-
-        C = psi4.core.Matrix.from_array(C)
+        if rot_method == 1:
+            print('Unitary rotation')
+            C = unitary(C, T1, ndocc, nvir, mints)
+        elif rot_method == 2:
+            print('Thouless theorem')
+            C = thouless(C, T1, ndocc, nvir, mints)
+        else:
+            raise NameError('Invalid rot type')
 
         S = overlap(C.np, mints)
-
         Str = np.trace(S)
         Soffd = np.sum(S) - Str
 
@@ -293,6 +335,7 @@ def CASCI(active_space, davidson = False, rot = False, ccsd = False, ccd = False
         printmatrix(T1)
         print('='*30)
 
+    printmatrix(C.np)
     fd, fo =get_fock(OEI, ERI, ndocc)
     
     if ccsd:

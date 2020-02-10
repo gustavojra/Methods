@@ -2,15 +2,16 @@ from CASCI import CASCI
 
 molecule mol {
     0 1
-    O
-    H 1 R
-    H 1 R 2 104.5
-    R = 1.0
+#    O
+#    H 1 R
+#    H 1 R 2 104.5
+#    R = 1.0
+    He
     symmetry c1
 }
 
 set {
-    BASIS         sto-3g
+    BASIS         3-21g
     REFERENCE     RHF
     SCF_TYPE      PK
     E_CONVERGENCE 12
@@ -19,4 +20,4 @@ set {
     FCI           True
 }
 
-CASCI('full', rot=True, ccsd=False, ccd=True)
+CASCI('full', rot=True, rot_method = 2, ccsd=True, ccd=False)
