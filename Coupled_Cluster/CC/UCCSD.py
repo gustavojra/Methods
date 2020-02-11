@@ -532,7 +532,6 @@ class UCCSD:
 
         rms_LIM = 10**(-self.CC_CONV)
         E_LIM = 10**(-self.E_CONV)
-        f = False
         t0 = time.time()
         print('='*37)
         while abs(dE) > E_LIM or max_rms > rms_LIM:

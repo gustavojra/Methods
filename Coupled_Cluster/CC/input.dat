@@ -1,9 +1,9 @@
 import sys
 sys.path.append('.')
-from UCCSD import UCCSD
+from RCCSD import RCCSD
 
 molecule mol {
-    1 2
+    0 1
     O
     H 1 0.96
     H 1 0.96 2 104.5
@@ -11,14 +11,14 @@ molecule mol {
 }
 
 set {
-    BASIS         cc-pvdz
-    REFERENCE     UHF
+    BASIS         sto-3g
+    REFERENCE     RHF
     SCF_TYPE      PK
     E_CONVERGENCE 12
 }
 
 e, wfn = energy('scf', return_wfn=True)
 
-X = UCCSD(wfn, CC_CONV = 8, E_CONV = 12)
+X = RCCSD(wfn, CC_CONV = 8, E_CONV = 12)
 e = energy('ccsd')
 print('Psi4 Energy: {:<15.10f}'.format(e))
