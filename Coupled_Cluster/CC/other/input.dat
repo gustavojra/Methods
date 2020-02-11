@@ -1,0 +1,49 @@
+# For compatibility issues
+
+import os
+import sys
+import timeit
+
+file_dir = os.path.dirname('.')
+sys.path.append(file_dir)
+
+file_dir = os.path.dirname('../Aux/')
+sys.path.append(file_dir)
+
+from tools import *
+
+molecule mol {
+    0 1
+    O
+    H 1 0.96
+    H 1 0.96 2 104.5
+}
+
+set {
+    BASIS         sto-3g
+    E_CONVERGENCE 10
+    SCF_TYPE      pk
+    MAXITER       50
+}
+
+# Compute Psi4 Energies
+
+psiE = energy('scf')
+psiMP2 = energy('mp2')
+#psiCCD = energy('ccd')
+
+basisname = psi4.core.get_global_option("BASIS")
+basis = psi4.core.BasisSet.build(mol, target=str(basisname), key='basis')
+mints = psi4.core.MintsHelper(basis) 
+
+# call RHF code
+from CCSD import *
+rhf = RHF(mol, mints)
+psi4.core.print_out('Psi4 RHF Energy:  {:<5.10f}\n'.format(psiE))
+psi4.core.print_out('Psi4 MP2 Energy:  {:<5.10f}\n'.format(psiMP2))
+#psi4.core.print_out('Psi4 CCD Energy:  {:<5.10f}\n'.format(psiCCD))
+
+# Call CC code
+cc = CC(rhf)
+cc.CCD()
+
