@@ -1,8 +1,8 @@
-from tools import *
 from fock import *
 import numpy as np
 import time
 import sys
+from tools import *
 
 def H_dif0(det1, molint1, molint2):
 

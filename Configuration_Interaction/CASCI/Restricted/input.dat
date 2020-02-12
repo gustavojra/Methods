@@ -1,4 +1,7 @@
+import sys
+sys.path.append('.')
 from CASCI import CASCI
+from CISD import CISD
 
 molecule mol {
     0 1
@@ -12,20 +15,18 @@ molecule mol {
 }
 
 set {
-    BASIS         3-21g
+    BASIS         sto-3g
     REFERENCE     RHF
     SCF_TYPE      PK
     E_CONVERGENCE 12
     MAXITER       100
     MAX_ATTEMPTS  10
     FCI           True
-    FROZEN_DOCC = [0]
-    ACTIVE = [8]
 }
 
-e = energy('detci')
+fci = energy('detci')
 
-CASCI('aaaaaaaauuuuu', rot = True)
-print(e)
+CISD()
 
+print('FCI', fci)
 

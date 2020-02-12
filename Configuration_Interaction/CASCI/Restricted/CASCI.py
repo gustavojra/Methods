@@ -8,13 +8,12 @@ import psi4
 import scipy.linalg as sp
 from itertools import permutations
 
-file_dir = os.path.dirname('../../Aux/')
+file_dir = os.path.dirname('../../../Aux/')
 sys.path.append(file_dir)
 
-import tools as tool
 from fock import Det
-from davidson import Davidson
 from Htools import *
+from tools import *
 
 ##############################################################################
 ##############################################################################
@@ -202,7 +201,7 @@ def CASCI(active_space, davidson = False, rot = False):
 
     Ecas, Ccas, ref, determinants = compute(active_space, OEI, ERI, nelec, ndocc, nvir, verb=True)
 
-    print('initial ener', Ecas)
+    print('CAS energy: {:<5.10f}'.format(Ecas + Vnuc))
 
     T1 = np.zeros([ndocc, nvir])
     C0 = Ccas[list(determinants).index(ref)]
