@@ -39,20 +39,20 @@ class RCCSD:
 
         # Case aaaa
         if arg.isupper():
-            return (self.Vint - self.Vint.swapaxes(2,3))[space(x), space(y), space(z), space(w)]
+            return self.Vanti[space(x), space(y), space(z), space(w)]
 
         # Case bbbb
         elif arg.islower():
-            return (self.Vint - self.Vint.swapaxes(2,3))[space(x), space(y), space(z), space(w)]
+            return self.Vanti[space(x), space(y), space(z), space(w)]
 
         # Case ab--
         elif x.isupper():
             # Case abab
             if z.isupper():
-                return self.Vint[space(x), space(y), space(z), space(w)]
+                return self.Vphys[space(x), space(y), space(z), space(w)]
             # Case abba
             if w.isupper():
-                return -(self.Vint[space(x), space(y), space(z), space(w)])
+                return -self.Vphys.transpose(0,1,3,2)[space(x), space(y), space(z), space(w)]
             else:
                 raise NameError('Invalid integral key')
 
@@ -60,140 +60,68 @@ class RCCSD:
         elif y.isupper():
             # Case baab
             if z.isupper():
-                return -(self.Vint[space(x), space(y), space(z), space(w)])
+                return -self.Vphys.transpose(1,0,2,3)[space(x), space(y), space(z), space(w)]
             # Case baba
             if w.isupper():
-                return self.Vint[space(x), space(y), space(z), space(w)]
+                return self.Vphys.transpose(1,0,3,2)[space(x), space(y), space(z), space(w)]
             else:
                 raise NameError('Invalid integral key')
 
     def update_energy(self):
         
-        self.Ecc  = 2*np.einsum('IA,IA->', self.fock_OV, self.T1)
-    
-        X = self.T2aa + 2*np.einsum('IA,JB->IJAB', self.T1, self.T1)
-        self.Ecc += (1.0/4.0)*np.einsum('IJAB,IJAB->', X, self.V('IJAB'))
-    
-        X = self.T2aa + 2*np.einsum('ia,jb->ijab', self.T1, self.T1)
-        self.Ecc += (1.0/4.0)*np.einsum('ijab,ijab->', X, self.V('ijab'))
-    
-        X = self.T2 + np.einsum('IA,jb->IjAb', self.T1, self.T1)
-        self.Ecc += np.einsum('IjAb,IjAb->', X, self.V('IjAb'))
-    
+        X = 2*self.T2 + 2*np.einsum('IA,JB->IJAB', self.T1, self.T1)
+        X += - self.T2.transpose(1,0,2,3) - np.einsum('JA,IB->IJAB', self.T1, self.T1)
+        self.Ecc = np.einsum('IjAb,IjAb->', X, self.V('IjAb'))
+
+    def update_tau_and_te(self):
+
+        self.tau = self.T2 + 0.5*np.einsum('IA,JB->IJAB', self.T1, self.T1)
+        self.Te = self.T2 + np.einsum('IA,JB->IJAB', self.T1, self.T1)
     
     def update_Fint(self):
 
-        # Clean up F cases
-        self.F = {}
+        # Slices
+        o = slice(0, self.ndocc)
+        v = slice(self.ndocc, self.nmo)
 
         # Update F(AE)
-        self.F.update({'AE' : np.zeros((self.nvir, self.nvir))})
-        self.F['AE'] += self.fock_VV - 0.5*np.einsum('ME,MA->AE', self.fock_OV, self.T1)
-        self.F['AE'] += np.einsum('MF,AMEF->AE', self.T1, self.V('AMEF'))
-        self.F['AE'] += np.einsum('mf,AmEf->AE', self.T1, self.V('AmEf'))
-
-        X = self.T2aa + 0.5*np.einsum('MA,NF->MNAF', self.T1, self.T1) - 0.5*np.einsum('MF,NA->MNAF', self.T1, self.T1)
-        self.F['AE'] += -0.5*np.einsum('MNAF,MNEF->AE', X, self.V('MNEF'))
-
-        X = self.T2 + 0.5*np.einsum('MA,nf->MnAf', self.T1, self.T1)
-        self.F['AE'] += -np.einsum('MnAf,MnEf->AE', X, self.V('MnEf'))
-
-        # Update F(ae)
-        self.F.update({'ae' : np.zeros((self.nvir, self.nvir))})
-        self.F['ae'] += self.fock_VV - 0.5*np.einsum('me,ma->ae', self.fock_OV, self.T1)
-        self.F['ae'] += np.einsum('mf,amef->ae', self.T1, self.V('amef'))
-        self.F['ae'] += np.einsum('MF,aMeF->ae', self.T1, self.V('aMeF'))
-
-        X = self.T2aa + 0.5*np.einsum('ma,nf->mnaf', self.T1, self.T1) - 0.5*np.einsum('mf,na->mnaf', self.T1, self.T1)
-        self.F['ae'] += -0.5*np.einsum('mnaf,mnef->ae', X, self.V('mnef'))
-
-        X = self.T2 + 0.5*np.einsum('ma,NF->NmFa', self.T1, self.T1)
-        self.F['ae'] += -np.einsum('NmFa,mNeF->ae', X, self.V('mNeF'))
+        self.Fae = np.zeros((self.nvir, self.nvir))
+        self.Fae += self.fock_VV - 0.5*np.einsum('ME,MA->AE', self.fock_OV, self.T1)
+        self.Fae += np.einsum('MF,MAFE->AE', self.T1, self.Vsa[o,v,v,v])
+        self.Fae += -np.einsum('MnAf,MnEf->AE', self.tau, self.Vsa[o,o,v,v])
 
         # Update F(MI)
-        self.F.update({'MI' : np.zeros((self.ndocc, self.ndocc))})
-        self.F['MI'] += self.fock_OO + 0.5*np.einsum('ME,IE->MI', self.fock_OV, self.T1)
-        self.F['MI'] += np.einsum('NE,MNIE->MI', self.T1, self.V('MNIE'))
-        self.F['MI'] += np.einsum('ne,MnIe->MI', self.T1, self.V('MnIe'))
-
-        X = self.T2aa + 0.5*np.einsum('IE,NF->INEF', self.T1, self.T1) - 0.5*np.einsum('IF,NE->INEF', self.T1, self.T1)
-        self.F['MI'] += +0.5*np.einsum('INEF,MNEF->MI', X, self.V('MNEF'))
-
-        X = self.T2 + 0.5*np.einsum('IE,nf->InEf', self.T1, self.T1)
-        self.F['MI'] += np.einsum('InEf,MnEf->MI', X, self.V('MnEf'))
-
-        # Update F(mi)
-        self.F.update({'mi' : np.zeros((self.ndocc, self.ndocc))})
-        self.F['mi'] += self.fock_OO + 0.5*np.einsum('me,ie->mi', self.fock_OV, self.T1)
-        self.F['mi'] += np.einsum('ne,mnie->mi', self.T1, self.V('mnie'))
-        self.F['mi'] += np.einsum('NE,mNiE->mi', self.T1, self.V('mNiE'))
-
-        X = self.T2aa + 0.5*np.einsum('ie,nf->inef', self.T1, self.T1) - 0.5*np.einsum('if,ne->inef', self.T1, self.T1)
-        self.F['mi'] += +0.5*np.einsum('inef,mnef->mi', X, self.V('mnef'))
-
-        X = self.T2 + 0.5*np.einsum('ie,NF->NiFe', self.T1, self.T1)
-        self.F['mi'] += np.einsum('NiFe,mNeF->mi', X, self.V('mNeF'))
+        self.Fmi = np.zeros((self.ndocc, self.ndocc))
+        self.Fmi += self.fock_OO + 0.5*np.einsum('ME,IE->MI', self.fock_OV, self.T1)
+        self.Fmi += np.einsum('NE,MNIE->MI', self.T1, self.Vsa[o,o,o,v])
+        self.Fmi += np.einsum('INEF,MNEF->MI', self.tau, self.Vsa[o,o,v,v])
 
         # Update F(ME)
-        self.F.update({'ME' : np.zeros((self.ndocc, self.nvir))})
-        self.F['ME'] += self.fock_OV + np.einsum('NF, MNEF-> ME', self.T1, self.V('MNEF')) + np.einsum('nf, MnEf-> ME', self.T1, self.V('MnEf'))
-
-        # Update F(me)
-        self.F.update({'me' : np.zeros((self.ndocc, self.nvir))})
-        self.F['me'] += self.fock_OV + np.einsum('nf, mnef-> me', self.T1, self.V('mnef')) + np.einsum('NF, mNeF-> me', self.T1, self.V('mNeF'))
+        self.Fme = np.zeros((self.ndocc, self.nvir))
+        self.Fme += self.fock_OV + np.einsum('NF, MNEF-> ME', self.T1, self.Vsa[o,o,v,v])
 
     def update_Winf(self):
+
+        # Slices
+        o = slice(0, self.ndocc)
+        v = slice(self.ndocc, self.nmo)
 
         # Clean up W cases
         self.W = {}
 
-        # Update W(MNIJ)
-        self.W.update({'MNIJ' : np.zeros((self.ndocc, self.ndocc, self.ndocc, self.ndocc))})
-        self.W['MNIJ'] += self.V('MNIJ')
-        self.W['MNIJ'] += np.einsum('JE, MNIE-> MNIJ', self.T1, self.V('MNIE'))
-        self.W['MNIJ'] += -np.einsum('IE, MNJE-> MNIJ', self.T1, self.V('MNJE'))
-        X = self.T2aa + np.einsum('IE,JF->IJEF', self.T1, self.T1) - np.einsum('IF,JE->IJEF', self.T1, self.T1)
-        self.W['MNIJ'] += (1.0/4.0)*np.einsum('IJEF,MNEF->MNIJ', X, self.V('MNEF'))
-
-        # Update W(mnij)
-        self.W.update({'mnij' : np.zeros((self.ndocc, self.ndocc, self.ndocc, self.ndocc))})
-        self.W['mnij'] += self.V('mnij')
-        self.W['mnij'] += np.einsum('je, mnie-> mnij', self.T1, self.V('mnie'))
-        self.W['mnij'] += -np.einsum('ie, mnje-> mnij', self.T1, self.V('mnje'))
-        X = self.T2aa + np.einsum('ie,jf->ijef', self.T1, self.T1) - np.einsum('if,je->ijef', self.T1, self.T1)
-        self.W['mnij'] += (1.0/4.0)*np.einsum('ijef,mnef->mnij', X, self.V('mnef'))
-
         # Update W(MnIj)
-        self.W.update({'MnIj' : np.zeros((self.ndocc, self.ndocc, self.ndocc, self.ndocc))})
-        self.W['MnIj'] += self.V('MnIj')
-        self.W['MnIj'] += np.einsum('je, MnIe-> MnIj', self.T1, self.V('MnIe'))
-        self.W['MnIj'] += -np.einsum('IE,MnjE -> MnIj', self.T1, self.V('MnjE'))
-        X = self.T2 + np.einsum('IE,jf->IjEf', self.T1, self.T1) 
-        self.W['MnIj'] += (1.0/2.0)*np.einsum('IjEf,MnEf->MnIj', X, self.V('MnEf'))
-
-        # Update W(ABEF)
-        self.W.update({'ABEF' : np.zeros((self.nvir, self.nvir, self.nvir, self.nvir))})
-        self.W['ABEF'] += self.V('ABEF')
-        self.W['ABEF'] += -np.einsum('MB, AMEF-> ABEF', self.T1, self.V('AMEF'))
-        self.W['ABEF'] += np.einsum('MA, BMEF-> ABEF', self.T1, self.V('BMEF'))
-        X = self.T2aa + np.einsum('MA,NB->MNAB', self.T1, self.T1) - np.einsum('MB,NA->MNAB', self.T1, self.T1)
-        self.W['ABEF'] += (1.0/4.0)*np.einsum('MNAB,MNEF->ABEF', X, self.V('MNEF'))
-
-        # Update W(abef)
-        self.W.update({'abef' : np.zeros((self.nvir, self.nvir, self.nvir, self.nvir))})
-        self.W['abef'] += self.V('abef')
-        self.W['abef'] += -np.einsum('mb, amef-> abef', self.T1, self.V('amef'))
-        self.W['abef'] += np.einsum('ma, bmef-> abef', self.T1, self.V('bmef'))
-        X = self.T2aa + np.einsum('ma,nb->mnab', self.T1, self.T1) - np.einsum('mb,na->mnab', self.T1, self.T1)
-        self.W['abef'] += (1.0/4.0)*np.einsum('mnab,mnef->abef', X, self.V('mnef'))
+        self.Wmnij = np.zeros((self.ndocc, self.ndocc, self.ndocc, self.ndocc))
+        self.Wmnij += self.Vphys[o,o,o,o]
+        self.Wmnij += np.einsum('je, MnIe-> MnIj', self.T1, self.Vphys[o,o,o,v])
+        self.Wmnij += np.einsum('IE,nMjE -> MnIj', self.T1, self.Vphys[o,o,o,v])
+        self.Wmnij += (1.0/2.0)*np.einsum('IjEf,MnEf->MnIj', self.Te, self.Vphys[o,o,v,v])
 
         # Update W(AbEf)
-        self.W.update({'AbEf' : np.zeros((self.nvir, self.nvir, self.nvir, self.nvir))})
-        self.W['AbEf'] += self.V('AbEf')
-        self.W['AbEf'] += -np.einsum('mb, AmEf-> AbEf', self.T1, self.V('AmEf'))
-        self.W['AbEf'] += np.einsum('MA,bMEf -> AbEf', self.T1, self.V('bMEf'))
-        X = self.T2 + np.einsum('MA,nb->MnAb', self.T1, self.T1) 
-        self.W['AbEf'] += (1.0/2.0)*np.einsum('MnAb,MnEf->AbEf', X, self.V('MnEf'))
+        self.Wabef = np.zeros((self.nvir, self.nvir, self.nvir, self.nvir))
+        self.Wabef += self.Vphys[v,v,v,v]
+        self.Wabef += -np.einsum('mb, mAfE-> AbEf', self.T1, self.Vphys[o,v,v,v])
+        self.Wabef += -np.einsum('MA, MbEf -> AbEf', self.T1, self.Vphys[o,v,v,v])
+        self.Wabef += (1.0/2.0)*np.einsum('MnAb,MnEf->AbEf', self.Te, self.Vphys[o,o,v,v])
 
         # Update W(MBEJ)
         self.W.update({'MBEJ' : np.zeros((self.ndocc, self.nvir, self.nvir, self.ndocc))})
@@ -214,14 +142,16 @@ class RCCSD:
         self.W['mbej'] += 0.5*np.einsum('NjFb,mNeF->mbej', self.T2, self.V('mNeF'))
 
         # Update W(MbEj)
-        self.W.update({'MbEj' : np.zeros((self.ndocc, self.nvir, self.nvir, self.ndocc))})
-        self.W['MbEj'] += self.V('MbEj')
-        self.W['MbEj'] += np.einsum('jf,MbEf->MbEj', self.T1, self.V('MbEf'))
-        self.W['MbEj'] += -np.einsum('nb,MnEj->MbEj', self.T1, self.V('MnEj'))
-        X = 0.5*self.T2aa + np.einsum('jf,nb->jnfb', self.T1, self.T1)
-        self.W['MbEj'] += -np.einsum('jnfb,MnEf->MbEj', X, self.V('MnEf'))
-        self.W['MbEj'] += 0.5*np.einsum('NjFb,MNEF->MbEj', self.T2, self.V('MNEF'))
+        self.W_MbEj = np.zeros((self.ndocc, self.nvir, self.nvir, self.ndocc))
+        self.W_MbEj += self.V('MbEj')
+        self.W_MbEj += np.einsum('jf,MbEf->MbEj', self.T1, self.Vphys[o,v,v,v])
+        self.W_MbEj += -np.einsum('nb,nMjE->MbEj', self.T1, self.Vphys[o,o,o,v])
+        X = self.T2 + 2*np.einsum('jf,nb->jnfb', self.T1, self.T1)
+        self.W_MbEj += -0.5*np.einsum('jnfb,MnEf->MbEj', X, self.Vphys[o,o,v,v])
+        self.W_MbEj += 0.5*np.einsum('NjFb,MNEF->MbEj', self.T2, self.Vsa[o,o,v,v])
 
+        # HERE    
+    
         # Update W(MbeJ)
         self.W.update({'MbeJ' : np.zeros((self.ndocc, self.nvir, self.nvir, self.ndocc))})
         self.W['MbeJ'] += self.V('MbeJ')
@@ -252,14 +182,15 @@ class RCCSD:
         # Create a new set of amplitudes
 
         newT1 = np.zeros(self.T1.shape)
+
         newT2 = np.zeros(self.T2.shape)
 
         # Update T(IA)
         newT1 += self.fock_OV 
-        newT1 += np.einsum('IE,AE->IA', self.T1, self.F['AE'])
-        newT1 += -np.einsum('MA,MI->IA', self.T1, self.F['MI'])
-        newT1 += np.einsum('IMAE,ME->IA', self.T2aa, self.F['ME'])
-        newT1 += np.einsum('ImAe,me->IA', self.T2, self.F['me'])
+        newT1 += np.einsum('IE,AE->IA', self.T1, self.Fae)
+        newT1 += -np.einsum('MA,MI->IA', self.T1, self.Fmi)
+        newT1 += np.einsum('IMAE,ME->IA', self.T2aa, self.Fme)
+        newT1 += np.einsum('ImAe,me->IA', self.T2, self.Fme)
         newT1 += np.einsum('ME,AMIE->IA', self.T1, self.V('AMIE'))
         newT1 += np.einsum('me,AmIe->IA', self.T1, self.V('AmIe'))
         newT1 += -0.5*np.einsum('MNAE,MNIE->IA', self.T2aa, self.V('MNIE'))
@@ -271,25 +202,25 @@ class RCCSD:
         # Update T(IjAb)
 
         newT2 += self.V('IjAb')
-        X = self.F['ae'] - 0.5*np.einsum('mb,me->be', self.T1, self.F['me'])
+        X = self.Fae - 0.5*np.einsum('mb,me->be', self.T1, self.Fme)
         newT2 += np.einsum('IjAe,be->IjAb', self.T2, X)
 
-        X = self.F['AE'] - 0.5*np.einsum('MA,ME->AE', self.T1, self.F['ME']) 
+        X = self.Fae - 0.5*np.einsum('MA,ME->AE', self.T1, self.Fme) 
         newT2 += np.einsum('IjEb,AE->IjAb', self.T2, X)
 
-        X = self.F['mi'] + 0.5*np.einsum('je,me->mj', self.T1, self.F['me']) 
+        X = self.Fmi + 0.5*np.einsum('je,me->mj', self.T1, self.Fme) 
         newT2 += -np.einsum('ImAb,mj->IjAb', self.T2, X)
 
-        X = self.F['MI'] + 0.5*np.einsum('IE,ME->MI', self.T1, self.F['ME']) 
+        X = self.Fmi + 0.5*np.einsum('IE,ME->MI', self.T1, self.Fme) 
         newT2 += -np.einsum('MjAb,MI->IjAb', self.T2, X)
 
         X = self.T2 + np.einsum('MA,nb->MnAb', self.T1, self.T1)
-        newT2 += np.einsum('MnAb,MnIj->IjAb', X, self.W['MnIj'])
+        newT2 += np.einsum('MnAb,MnIj->IjAb', X, self.Wmnij)
 
         X = self.T2 + np.einsum('IE,jf->IjEf', self.T1, self.T1) 
-        newT2 += np.einsum('IjEf,AbEf->IjAb', X, self.W['AbEf'])
+        newT2 += np.einsum('IjEf,AbEf->IjAb', X, self.Wabef)
 
-        newT2 += np.einsum('IMAE,MbEj->IjAb', self.T2aa, self.W['MbEj'])
+        newT2 += np.einsum('IMAE,MbEj->IjAb', self.T2aa, self.W_MbEj)
         newT2 += -np.einsum('IE,MA,MbEj->IjAb', self.T1, self.T1, self.V('MbEj'))
 
         newT2 += np.einsum('ImAe,mbej->IjAb', self.T2, self.W['mbej'])
@@ -314,14 +245,14 @@ class RCCSD:
 
         # Compute RMS
 
-        self.rms1 = np.sqrt(np.sum(np.square(newT1 - self.T1)))/(self.ndocc*self.nvir)
-        self.rms2 = np.sqrt(np.sum(np.square(newT2 - self.T2)))/(self.ndocc*self.nvir)**2
+        self.rms1 = np.sqrt(np.sum(np.square(newT1 - self.T1 )))/(self.ndocc*self.nvir)
+        self.rms2 = np.sqrt(np.sum(np.square(newT2 - self.T2 )))/(self.ndocc*self.ndocc*self.nvir*self.nvir)
 
         # Save new amplitudes
 
         self.T1 = newT1
         self.T2 = newT2
-        self.T2aa = self.T2 - self.T2.swapaxes(2,3)
+        self.T2aa = self.T2 - self.T2.transpose(1,0,2,3)
 
     def __init__(self, wfn, CC_CONV=6, CC_MAXITER=50, E_CONV=8):
 
@@ -330,7 +261,7 @@ class RCCSD:
         self.nmo = wfn.nmo()
         self.nelec = wfn.nalpha() + wfn.nbeta()
         if self.nelec % 2 != 0:
-            raise NameError('Odd number of electron incompatible with RHF')
+            NameError('Invalid number of electrons for RHF') 
         self.ndocc = int(self.nelec/2)
         self.nvir = self.nmo - self.ndocc
         self.C = wfn.Ca()
@@ -341,9 +272,9 @@ class RCCSD:
         self.E_CONV = E_CONV
         self.CC_MAXITER = CC_MAXITER
 
-        print("Number of electrons:            {}".format(self.nelec))
-        print("Number of Doubly Occupied MOs   {}".format(self.ndocc))
-        print("Number of MOs:                  {}".format(self.nmo))
+        print("Number of electrons:              {}".format(self.nelec))
+        print("Number of Doubly Occupied MOs:    {}".format(self.ndocc))
+        print("Number of MOs:                    {}".format(self.nmo))
 
         print("\n Transforming integrals...")
 
@@ -351,16 +282,16 @@ class RCCSD:
         self.mints = mints
         # One electron integral
         h = np.asarray(mints.ao_kinetic()) + np.asarray(mints.ao_potential())
+        ## Alpha
         h = np.einsum('up,vq,uv->pq', self.C, self.C, h)
-
-        V = np.asarray(mints.mo_eri(self.C, self.C, self.C, self.C))
+        Vchem = np.asarray(mints.mo_eri(self.C, self.C, self.C, self.C))
     
         # Slices
         o = slice(0, self.ndocc)
         v = slice(self.ndocc, self.nmo)
 
         # Form the full fock matrices
-        f = h + 2*np.einsum('pqkk->pq', V[:,:,o,o]) - np.einsum('pkqk->pq', V[:,o,:,o])
+        f = h + 2*np.einsum('pqkk->pq', Vchem[:,:,o,o]) - np.einsum('pkqk->pq', Vchem[:,o,:,o])
 
         # Save diagonal terms
         self.fock_Od = copy.deepcopy(f.diagonal()[o])
@@ -375,8 +306,11 @@ class RCCSD:
         self.fock_OV = f[o,v]
 
         # Save two-electron integral in physicists notation (3 Spin cases)
-        self.Vint = V.swapaxes(1,2)
-        #self.Vint = self.Vint - self.Vint.swapaxes(2,3)
+        self.Vanti = Vchem.swapaxes(1,2)
+        self.Vanti = self.Vanti - self.Vanti.swapaxes(2,3)
+
+        self.Vphys = Vchem.swapaxes(1,2)
+        self.Vsa = 2*self.Vphys - self.Vphys.swapaxes(2,3)
 
         self.compute()
 
@@ -386,6 +320,7 @@ class RCCSD:
 
         new = np.newaxis
         self.d = 1.0/(self.fock_Od[:, new] - self.fock_Vd[new, :])
+
         self.D = 1.0/(self.fock_Od[:, new, new, new] + self.fock_Od[new, :, new, new] - self.fock_Vd[new, new, :, new] - self.fock_Vd[new, new, new, :])
 
         # Initial T1 amplitudes
@@ -395,7 +330,7 @@ class RCCSD:
         # Initial T2 amplitudes
 
         self.T2 = self.D*self.V('IjAb')
-        self.T2aa = self.T2 - self.T2.swapaxes(2,3)
+        self.T2aa = self.T2 - self.T2.transpose(1,0,2,3)
 
         # Get MP2 energy
 
@@ -404,8 +339,6 @@ class RCCSD:
         print('MP2 Energy:   {:<15.10f}'.format(self.Ecc + self.Ehf))
 
         self.rms1 = 0.0
-
-        # Initial T2 amplitudes
 
         self.rms2 = 0.0
 
@@ -421,6 +354,7 @@ class RCCSD:
             t = time.time()
             if ite > self.CC_MAXITER:
                 raise NameError('CC equations did not converge')
+            self.update_tau_and_te()
             self.update_Fint()
             self.update_Winf()        
             self.update_amp()
