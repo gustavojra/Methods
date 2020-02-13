@@ -12,7 +12,7 @@ molecule mol {
 }
 
 set {
-    BASIS         sto-3g
+    BASIS         cc-pvdz
     REFERENCE     RHF
     SCF_TYPE      PK
     E_CONVERGENCE 12
@@ -21,6 +21,6 @@ set {
     FCI           True
 }
 
-CASCI('full', rot = True, rot_method = 2)
+CASCI('oaaaaaaaauuuuuuuuuuuuuuu', rot = True, rot_method = 1)
 
 print(energy('ccsd'))

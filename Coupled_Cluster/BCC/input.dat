@@ -1,0 +1,59 @@
+import sys
+sys.path.append('.')
+from RBCCD import RBCCD
+import scipy.linalg as sp
+import numpy as np
+
+def rotate_u(C, T1, Sao, ndocc, nvir):
+    X = np.block([
+                 [ np.identity(ndocc), np.zeros_like(T1)],
+                 [ T1.T, np.identity(nvir)]])
+    
+    U = sp.expm(X - X.T)
+    C = C.np
+    C = C.dot(U)
+    print('*'*37)
+    print('Rotating orbitals...')
+    Sorb = np.einsum('up,vq,uv->pq', C, C, Sao)
+    print('Overlap trace:        {:<4.2f}'.format(np.trace(Sorb)))
+    print('Overlap offdiagonal:  {:<4.2f}'.format(np.sum(Sorb) - np.trace(Sorb)))
+    print('*'*37)
+    return psi4.core.Matrix.from_array(C)
+
+molecule mol {
+    0 1
+    O
+    H 1 0.96
+    H 1 0.96 2 104.5
+    symmetry c1
+}
+
+set {
+    BASIS         cc-pvdz
+    REFERENCE     RHF
+    SCF_TYPE      PK
+    E_CONVERGENCE 12
+}
+
+ep, wfn = energy('bccd', return_wfn=True)
+hfe, hf_wfn = energy('scf', return_wfn=True)
+
+X = RBCCD(hf_wfn, E_CONV=12, T1_CONV=10)
+
+C = X.C
+T1 = X.T1
+Sao = X.Sao
+ndocc = X.ndocc
+nvir = X.nvir
+Ecc = X.Ecc + X.Escf
+print_out('\n Psi4 RHF energy: {:<12.10f}'.format(hfe))
+print_out('\n MAX T1: {:<12.10f}     Energy: {:<12.10f}'.format(np.max(abs(T1)),Ecc))
+while np.max(abs(T1)) > 1.e-8:
+    X = RBCCD(wfn, Cguess = rotate_u(C, T1, Sao, ndocc, nvir), E_CONV=12)
+    C = X.C
+    T1 = X.T1
+    Ecc = X.Ecc + X.Escf
+    print_out('\n MAX T1: {:<12.10f}     Energy: {:<12.10f}'.format(np.max(abs(T1)),Ecc))
+
+print_out('\n Psi4 BCCD energy: {:<12.10f}'.format(ep))
+print(ep)

@@ -186,7 +186,8 @@ class RCCD:
                       +    np.einsum('mbfe, ijmaef -> ijab', self.Vovvv, self.T3)                             \
                       -0.5*np.einsum('mnje, minbae -> ijab', self.Vooov, self.T3) \
                       +0.5*np.einsum('nmje, minbae -> ijab', self.Vooov, self.T3) \
-                      -    np.einsum('mnje, imnabe -> ijab', self.Vooov, self.T3)                             
+                      -    np.einsum('mnje, imnabe -> ijab', self.Vooov, self.T3) \
+                      +    np.einsum('me,   ijmabe -> ijab', self.fock_OV, self.T3)
 
         self.T3onT2 = self.T3onT2 + np.einsum('ijab -> jiba', self.T3onT2) 
 
