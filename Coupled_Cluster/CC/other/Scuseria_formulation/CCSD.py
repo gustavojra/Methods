@@ -48,7 +48,7 @@ def cc_energy(T1, T2):
     E = np.einsum('abij,ijab->', Vint[v,v,o,o], X)
     return E
 
-def CCSD_Iter(T1, T2, EINSUMOPT='optimal'):
+def CCSD_Iter(T1, T2, EINSUMOPT=False):
 
     # Intermediate arrays
 

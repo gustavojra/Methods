@@ -1,6 +1,7 @@
 import sys
 sys.path.append('.')
-from RCCSD import RCCSD
+from RCCD import RCCD
+from UCCD import UCCD
 
 molecule mol {
     0 1
@@ -11,7 +12,7 @@ molecule mol {
 }
 
 set {
-    BASIS         cc-pvtz
+    BASIS         cc-pvdz
     REFERENCE     RHF
     SCF_TYPE      PK
     E_CONVERGENCE 12
@@ -19,6 +20,6 @@ set {
 
 e, wfn = energy('scf', return_wfn=True)
 
-X = RCCSD(wfn, CC_CONV = 8, E_CONV = 12)
-e = energy('ccsd')
-print('Psi4 Energy: {:<15.10f}'.format(e))
+X = RCCD(wfn, CC_CONV = 8, E_CONV = 12)
+
+print(-76.2393954570)
