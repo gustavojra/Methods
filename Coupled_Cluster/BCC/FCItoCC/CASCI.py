@@ -329,6 +329,9 @@ def CASCI(active_space, davidson = False, rot = False, rot_method = 1, ccsd = Fa
                     a = det.exclusive(ref)[0][0] - ndocc
                     T1[i,a] = ci
 
+            if det - ref == 6:
+                print('C3 coeff', ci)
+
         tool.printmatrix(T1)
         ite += 1
         print('T1 amplitudes')

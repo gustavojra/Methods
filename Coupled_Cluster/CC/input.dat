@@ -11,7 +11,7 @@ molecule mol {
 }
 
 set {
-    BASIS         cc-pvdz
+    BASIS         cc-pvtz
     REFERENCE     RHF
     SCF_TYPE      PK
     E_CONVERGENCE 12

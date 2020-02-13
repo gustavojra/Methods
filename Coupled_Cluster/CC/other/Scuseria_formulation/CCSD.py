@@ -5,7 +5,7 @@ import numpy as np
 import time
 import copy
 
-file_dir = os.path.dirname('../../Aux/')
+file_dir = os.path.dirname('../../../../Aux/')
 sys.path.append(file_dir)
 
 from tools import *
@@ -135,7 +135,7 @@ water = psi4.geometry("""
     H 1 R
     H 1 R 2 A
     
-    R = .9
+    R = 0.96
     A = 104.5
     symmetry c1
 """)
@@ -263,6 +263,7 @@ LIM = 10**(-CC_CONV)
 
 ite = 0
 
+tinit = time.time()
 while r2 > LIM or r1 > LIM:
     ite += 1
     if ite > CC_MAXITER:
@@ -285,7 +286,7 @@ while r2 > LIM or r1 > LIM:
 
 print("\nCC Equations Converged!!!")
 print("Final CCSD Energy:     {:<5.10f}".format(E + scf_e))
-print('CCSD Energy from Psi4: {:<5.10f}'.format(p4_ccsd))
 print("Total Computation time:        {}".format(time.time() - tinit))
+print('CCSD Energy from Psi4: {:<5.10f}'.format(p4_ccsd))
 
 
