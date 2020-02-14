@@ -18,6 +18,9 @@ class RCCSD:
         X += - self.T2.transpose(1,0,2,3) - np.einsum('JA,IB->IJAB', self.T1, self.T1,optimize='optimal')
         self.Ecc = np.einsum('IjAb,IjAb->', X, self.Voovv,optimize='optimal')
 
+        #X = 2*self.T2 - self.T2.transpose(1,0,2,3)
+        #self.Ecc = np.einsum('IjAb,IjAb->', X, self.Voovv,optimize='optimal')
+
     def update_tau_and_te(self):
 
         self.tau = self.T2 + 0.5*np.einsum('IA,JB->IJAB', self.T1, self.T1,optimize='optimal')
@@ -120,7 +123,7 @@ class RCCSD:
 
         # Compute RMS
 
-        #newT1[self.activeO, self.activeV] = 0.0
+        newT1[self.activeO, self.activeV] = 0.0
         self.rms1 = np.sqrt(np.sum(np.square(newT1 - self.T1 )))/(self.ndocc*self.nvir)
         self.rms2 = np.sqrt(np.sum(np.square(newT2 - self.T2 )))/(self.ndocc*self.ndocc*self.nvir*self.nvir)
 
@@ -142,7 +145,7 @@ class RCCSD:
         self.C = psi4.core.Matrix.from_array(orbitals)
         self.Vnuc = Vnuc
         self.activeO = slice(nfrozen, self.ndocc)
-        self.activeV = slice(nactive+nfrozen-self.ndocc, self.nvir)
+        self.activeV = slice(0, self.nvir - self.nmo +  nactive + nfrozen)
 
         # Save Options
         self.CC_CONV = CC_CONV
@@ -159,6 +162,8 @@ class RCCSD:
         print("Number of electrons:              {}".format(self.nelec))
         print("Number of Doubly Occupied MOs:    {}".format(self.ndocc))
         print("Number of MOs:                    {}".format(self.nmo))
+        print("Number of Active Occ:             {}".format(self.activeO))
+        print("Number of Active Vir:             {}".format(self.activeV))
 
         print("\n Transforming integrals...")
 
@@ -215,13 +220,13 @@ class RCCSD:
 
         self.D = 1.0/(self.fock_Od[:, new, new, new] + self.fock_Od[new, :, new, new] - self.fock_Vd[new, new, :, new] - self.fock_Vd[new, new, new, :])
 
-        # Initial T1 amplitudes
+        ## Initial T1 amplitudes
 
-        self.T1 = self.fock_OV*self.d
+        #self.T1 = self.fock_OV*self.d
 
-        # Initial T2 amplitudes
+        ## Initial T2 amplitudes
 
-        self.T2 = self.D*self.Voovv
+        #self.T2 = self.D*self.Voovv
 
         # Get MP2 energy
 

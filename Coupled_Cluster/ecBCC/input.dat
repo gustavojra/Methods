@@ -21,7 +21,7 @@ set {
     FCI           True
 }
 
-CASCI('aaaaaaa', rot = True, rot_method = 1)
+CASCI('full', rot = True, rot_method = 1, CC='SD')
 
 print(energy('ccsd'))
 print(energy('bccd'))
