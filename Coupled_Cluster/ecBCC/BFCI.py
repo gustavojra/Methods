@@ -14,6 +14,7 @@ sys.path.append(file_dir)
 import tools as tool
 from fock import Det
 from RCCD import RCCD
+from RCCSD import RCCSD
 from Htools import *
 from CASDecom import CASDecom
 
@@ -156,7 +157,7 @@ def compute(active_space, OEI, ERI, nelec, ndocc, nvir, verb = False):
 
     return Ecas, Ccas, ref, determinants
          
-def CASCI(active_space, rot = False, rot_method = 1):
+def CASCI(active_space, rot = False, rot_method = 1, CC='SD'):
 
     print('\n --------- CASCI STARTED --------- \n')
 
@@ -223,6 +224,14 @@ def CASCI(active_space, rot = False, rot_method = 1):
     # Check if active space size is consistem with given integrals
     if len(active_space) != nmo:
         raise NameError('Active Space size is {} than the number of molecular orbitals'.format('greater' if len(active_space) > nmo else 'smaller'))
+
+    nfrozen = 0
+    nactive = 0
+    for i in active_space:
+        if i == 'o':
+            nfrozen += 1
+        if i == 'a':
+            nactive += 1
 
     Ecas, Ccas, ref, determinants = compute(active_space, OEI, ERI, nelec, ndocc, nvir, verb=True)
 
@@ -307,4 +316,7 @@ def CASCI(active_space, rot = False, rot_method = 1):
     T1, T2, T3, T4abab, T4abaa = CASDecom(Ccas, determinants, ref)
     printmatrix(T1)
 
-    RCCD(C, scf_e, nmo, nelec/2, nelec/2, Vnuc, mints, T2, T3, T4abab, T4abaa)
+    if CC == 'D':
+        RCCD(C, scf_e, nmo, nelec/2, nelec/2, Vnuc, mints, T2, T3, T4abab, T4abaa)
+    if CC == 'SD':
+        RCCSD(C, scf_e, nmo, nelec/2, nelec/2, Vnuc, mints, nactive, nfrozen, T1, T2, T3, T4abab, T4abaa)

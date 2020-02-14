@@ -21,5 +21,3 @@ set {
 e, wfn = energy('scf', return_wfn=True)
 
 X = RCCD(wfn, CC_CONV = 8, E_CONV = 12)
-
-print(-76.2393954570)
