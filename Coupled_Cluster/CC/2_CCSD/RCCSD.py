@@ -18,63 +18,68 @@ class RCCSD:
         X += - self.T2.transpose(1,0,2,3) - np.einsum('JA,IB->IJAB', self.T1, self.T1,optimize='optimal')
         self.Ecc = np.einsum('IjAb,IjAb->', X, self.Voovv,optimize='optimal')
 
-    def update_tau_and_te(self):
+    def get_Fint(self):
 
-        self.tau = self.T2 + 0.5*np.einsum('IA,JB->IJAB', self.T1, self.T1,optimize='optimal')
-        self.Te = self.T2 + np.einsum('IA,JB->IJAB', self.T1, self.T1,optimize='optimal')
-    
-    def update_Fint(self):
+        tau = self.T2 + 0.5*np.einsum('IA,JB->IJAB', self.T1, self.T1,optimize='optimal')
 
-        # Update F(AE)
-        self.Fae = np.zeros((self.nvir, self.nvir))
-        self.Fae += self.fock_VV - 0.5*np.einsum('ME,MA->AE', self.fock_OV, self.T1,optimize='optimal')
-        self.Fae += np.einsum('MF,MAFE->AE', self.T1, self.Aovvv,optimize='optimal')
-        self.Fae += -np.einsum('MnAf,MnEf->AE', self.tau, self.Aoovv,optimize='optimal')
+        # Compute F(AE)
+        Fae = np.zeros((self.nvir, self.nvir))
+        Fae += self.fock_VV - 0.5*np.einsum('ME,MA->AE', self.fock_OV, self.T1,optimize='optimal')
+        Fae += np.einsum('MF,MAFE->AE', self.T1, self.Aovvv,optimize='optimal')
+        Fae += -np.einsum('MnAf,MnEf->AE', tau, self.Aoovv,optimize='optimal')
 
-        # Update F(MI)
-        self.Fmi = np.zeros((self.ndocc, self.ndocc))
-        self.Fmi += self.fock_OO + 0.5*np.einsum('ME,IE->MI', self.fock_OV, self.T1,optimize='optimal')
-        self.Fmi += np.einsum('NE,MNIE->MI', self.T1, self.Aooov,optimize='optimal')
-        self.Fmi += np.einsum('INEF,MNEF->MI', self.tau, self.Aoovv,optimize='optimal')
+        # Compute F(MI)
+        Fmi = np.zeros((self.ndocc, self.ndocc))
+        Fmi += self.fock_OO + 0.5*np.einsum('ME,IE->MI', self.fock_OV, self.T1,optimize='optimal')
+        Fmi += np.einsum('NE,MNIE->MI', self.T1, self.Aooov,optimize='optimal')
+        Fmi += np.einsum('INEF,MNEF->MI', tau, self.Aoovv,optimize='optimal')
 
-        # Update F(ME)
-        self.Fme = np.zeros((self.ndocc, self.nvir))
-        self.Fme += self.fock_OV + np.einsum('NF, MNEF-> ME', self.T1, self.Aoovv,optimize='optimal')
+        # Compute F(ME)
+        Fme = np.zeros((self.ndocc, self.nvir))
+        Fme += self.fock_OV + np.einsum('NF, MNEF-> ME', self.T1, self.Aoovv,optimize='optimal')
 
-    def update_Winf(self):
+        return Fae, Fmi, Fme
 
-        # Update W(MnIj)
-        self.Wmnij = np.zeros((self.ndocc, self.ndocc, self.ndocc, self.ndocc))
-        self.Wmnij += self.Voooo
-        self.Wmnij += np.einsum('je, MnIe-> MnIj', self.T1, self.Vooov,optimize='optimal')
-        self.Wmnij += np.einsum('IE,nMjE -> MnIj', self.T1, self.Vooov,optimize='optimal')
-        self.Wmnij += (1.0/2.0)*np.einsum('IjEf,MnEf->MnIj', self.Te, self.Voovv,optimize='optimal')
+    def get_Winf(self, Te):
 
-        # Update W(AbEf)
-        self.Wabef = np.zeros((self.nvir, self.nvir, self.nvir, self.nvir))
-        self.Wabef += self.Vvvvv
-        self.Wabef += -np.einsum('mb, mAfE-> AbEf', self.T1, self.Vovvv,optimize='optimal')
-        self.Wabef += -np.einsum('MA, MbEf -> AbEf', self.T1, self.Vovvv,optimize='optimal')
-        self.Wabef += (1.0/2.0)*np.einsum('MnAb,MnEf->AbEf', self.Te, self.Voovv,optimize='optimal')
+        # Compute W(MnIj)
+        Wmnij = np.zeros((self.ndocc, self.ndocc, self.ndocc, self.ndocc))
+        Wmnij += self.Voooo
+        Wmnij += np.einsum('je, MnIe-> MnIj', self.T1, self.Vooov,optimize='optimal')
+        Wmnij += np.einsum('IE,nMjE -> MnIj', self.T1, self.Vooov,optimize='optimal')
+        Wmnij += (1.0/2.0)*np.einsum('IjEf,MnEf->MnIj', Te, self.Voovv,optimize='optimal')
 
-        # Update W(MbEj)
-        self.W_MbEj = np.zeros((self.ndocc, self.nvir, self.nvir, self.ndocc))
-        self.W_MbEj += self.Voovv.transpose(0,3,2,1)
-        self.W_MbEj += np.einsum('jf,MbEf->MbEj', self.T1, self.Vovvv,optimize='optimal')
-        self.W_MbEj += -np.einsum('nb,nMjE->MbEj', self.T1, self.Vooov,optimize='optimal')
+        # Compute W(AbEf)
+        Wabef = np.zeros((self.nvir, self.nvir, self.nvir, self.nvir))
+        Wabef += self.Vvvvv
+        Wabef += -np.einsum('mb, mAfE-> AbEf', self.T1, self.Vovvv,optimize='optimal')
+        Wabef += -np.einsum('MA, MbEf -> AbEf', self.T1, self.Vovvv,optimize='optimal')
+        Wabef += (1.0/2.0)*np.einsum('MnAb,MnEf->AbEf', Te, self.Voovv,optimize='optimal')
+
+        # Compute W(MbEj)
+        W_MbEj = np.zeros((self.ndocc, self.nvir, self.nvir, self.ndocc))
+        W_MbEj += self.Voovv.transpose(0,3,2,1)
+        W_MbEj += np.einsum('jf,MbEf->MbEj', self.T1, self.Vovvv,optimize='optimal')
+        W_MbEj += -np.einsum('nb,nMjE->MbEj', self.T1, self.Vooov,optimize='optimal')
         X = self.T2 + 2*np.einsum('jf,nb->jnfb', self.T1, self.T1,optimize='optimal')
-        self.W_MbEj += -0.5*np.einsum('jnfb,MnEf->MbEj', X, self.Voovv,optimize='optimal')
-        self.W_MbEj += 0.5*np.einsum('NjFb,MNEF->MbEj', self.T2, self.Aoovv,optimize='optimal')
+        W_MbEj += -0.5*np.einsum('jnfb,MnEf->MbEj', X, self.Voovv,optimize='optimal')
+        W_MbEj += 0.5*np.einsum('NjFb,MNEF->MbEj', self.T2, self.Aoovv,optimize='optimal')
 
-        # Update W(MbeJ)
-        self.W_MbeJ = np.zeros((self.ndocc, self.nvir, self.nvir, self.ndocc))
-        self.W_MbeJ += -self.Vovov.transpose(0,1,3,2)
-        self.W_MbeJ += -np.einsum('JF,MbFe->MbeJ', self.T1, self.Vovvv,optimize='optimal')
-        self.W_MbeJ += np.einsum('nb,MnJe->MbeJ', self.T1, self.Vooov,optimize='optimal')
+        # Compute W(MbeJ)
+        W_MbeJ = np.zeros((self.ndocc, self.nvir, self.nvir, self.ndocc))
+        W_MbeJ += -self.Vovov.transpose(0,1,3,2)
+        W_MbeJ += -np.einsum('JF,MbFe->MbeJ', self.T1, self.Vovvv,optimize='optimal')
+        W_MbeJ += np.einsum('nb,MnJe->MbeJ', self.T1, self.Vooov,optimize='optimal')
         X = 0.5*self.T2 + np.einsum('JF,nb->JnFb', self.T1, self.T1,optimize='optimal')
-        self.W_MbeJ += np.einsum('JnFb,nMeF->MbeJ', X, self.Voovv,optimize='optimal')
+        W_MbeJ += np.einsum('JnFb,nMeF->MbeJ', X, self.Voovv,optimize='optimal')
+
+        return Wmnij, Wabef, W_MbEj, W_MbeJ
 
     def update_amp(self):
+
+        Te = self.T2 + np.einsum('IA,JB->IJAB', self.T1, self.T1,optimize='optimal')
+        Fae, Fmi, Fme = self.get_Fint()
+        Wmnij, Wabef, W_MbEj, W_MbeJ = self.get_Winf(Te)
 
         # Create a new set of amplitudes
         newT1 = np.zeros(self.T1.shape)
@@ -82,10 +87,10 @@ class RCCSD:
 
         # Update T(IA)
         newT1 += self.fock_OV 
-        newT1 += np.einsum('IE,AE->IA', self.T1, self.Fae,optimize='optimal')
-        newT1 += -np.einsum('MA,MI->IA', self.T1, self.Fmi,optimize='optimal')
+        newT1 += np.einsum('IE,AE->IA', self.T1, Fae,optimize='optimal')
+        newT1 += -np.einsum('MA,MI->IA', self.T1, Fmi,optimize='optimal')
         X = 2*self.T2 - self.T2.transpose(1,0,2,3)
-        newT1 += np.einsum('ImAe,me->IA', X, self.Fme,optimize='optimal')
+        newT1 += np.einsum('ImAe,me->IA', X, Fme,optimize='optimal')
         newT1 += np.einsum('ME,AMIE->IA', self.T1, self.Avoov,optimize='optimal')
         newT1 += -np.einsum('MnAe,MnIe->IA', self.T2, self.Aooov,optimize='optimal')
         newT1 += np.einsum('ImEf,mAfE->IA', self.T2, self.Aovvv,optimize='optimal')
@@ -94,21 +99,21 @@ class RCCSD:
         # Update T(IjAb)
 
         newT2 += self.Voovv
-        newT2 += np.einsum('mnab,mnij->ijab', self.Te, self.Wmnij,optimize='optimal')
-        newT2 += np.einsum('ijef,abef->ijab', self.Te, self.Wabef,optimize='optimal')
+        newT2 += np.einsum('mnab,mnij->ijab', Te, Wmnij,optimize='optimal')
+        newT2 += np.einsum('ijef,abef->ijab', Te, Wabef,optimize='optimal')
 
-        X = self.Fae - 0.5*np.einsum('mb,me->be', self.T1, self.Fme,optimize='optimal')
+        X = Fae - 0.5*np.einsum('mb,me->be', self.T1, Fme,optimize='optimal')
         P = np.einsum('IjAe,be->IjAb', self.T2, X,optimize='optimal')
-        X = self.Fmi + 0.5*np.einsum('je,me->mj', self.T1, self.Fme,optimize='optimal')
+        X = Fmi + 0.5*np.einsum('je,me->mj', self.T1, Fme,optimize='optimal')
         P += - np.einsum('ImAb,mj->IjAb', self.T2, X,optimize='optimal')
         
         X = self.T2 - self.T2.transpose(1,0,2,3)
-        P += np.einsum('imae,mbej->ijab', X, self.W_MbEj,optimize='optimal')
+        P += np.einsum('imae,mbej->ijab', X, W_MbEj,optimize='optimal')
         P += -np.einsum('ie,ma,mbej->ijab', self.T1, self.T1, self.Voovv.transpose(0,3,2,1),optimize='optimal')
 
-        P += np.einsum('imae,mbej->ijab', self.T2, self.W_MbEj + self.W_MbeJ,optimize='optimal')
+        P += np.einsum('imae,mbej->ijab', self.T2, W_MbEj + W_MbeJ,optimize='optimal')
 
-        P += np.einsum('mibe,maej->ijab', self.T2, self.W_MbeJ,optimize='optimal')
+        P += np.einsum('mibe,maej->ijab', self.T2, W_MbeJ,optimize='optimal')
         P += -np.einsum('ie,mb,maje->ijab', self.T1, self.T1, self.Vovov,optimize='optimal')
 
         P += np.einsum('IE,jEbA->IjAb', self.T1, self.Vovvv,optimize='optimal')
@@ -236,9 +241,6 @@ class RCCSD:
             t = time.time()
             if ite > self.CC_MAXITER:
                 raise NameError('CC equations did not converge')
-            self.update_tau_and_te()
-            self.update_Fint()
-            self.update_Winf()        
             self.update_amp()
             dE = -self.Ecc
             self.update_energy()
