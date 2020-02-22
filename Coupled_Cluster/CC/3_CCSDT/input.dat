@@ -1,8 +1,6 @@
 import sys
-sys.path.append('../../../3_CCSDT')
-sys.path.append('../../../2_CCSD')
+sys.path.append('.')
 from RCCSDT import RCCSDT
-from RCCSD import RCCSD
 
 molecule mol {
   0 1
@@ -16,7 +14,7 @@ molecule mol {
 
 
 set {
-    BASIS         cc-pvdz
+    BASIS         sto-3g
     REFERENCE     RHF
     SCF_TYPE      PK
     E_CONVERGENCE 12
@@ -28,5 +26,6 @@ e = energy('ccsd')
 
 X = RCCSDT(wfn, E_CONV=12, CC_CONV = 12, CC_MAXITER=100)
 
+print('MRCC Full T: -75.019819521964')
 print(e)
 

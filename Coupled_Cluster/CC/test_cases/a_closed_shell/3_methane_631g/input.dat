@@ -26,7 +26,7 @@ set {
 ehf, wfn = energy('scf', return_wfn=True)
 e = energy('ccsd')
 
-X = RCCSD(wfn, E_CONV=12, CC_CONV = 12, CC_MAXITER=100)
+X = RCCSDT(wfn, E_CONV=12, CC_CONV = 12, CC_MAXITER=100)
 
 print(e)
 
