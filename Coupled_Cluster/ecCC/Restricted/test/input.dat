@@ -1,9 +1,6 @@
 import sys
 sys.path.append('../Modules/')
 from CASCCSD import CASCCSD
-from TCCSD import TCCSD
-from printtensor import *
-from save_amp import *
 
 molecule mol {
     0 1
@@ -14,7 +11,7 @@ molecule mol {
 }
 
 set {
-    BASIS         cc-pvdz
+    BASIS         sto-3g
     REFERENCE     RHF
     SCF_TYPE      PK
     SOSCF         True
@@ -26,17 +23,9 @@ set {
 }
 
 ccsd = energy('ccsd')
-bccd = energy('bccd')
-
-set {
-    FROZEN_DOCC = [1]
-    ACTIVE = [7]
-}
-
 e, wfn = energy('detci', return_wfn=True)
 X = CASCCSD(wfn)
 
 print_out('\nCAS energy:      {:<5.10f}\n'.format(e))
 print_out('CASCCSD  energy: {:<5.10f}\n'.format(X.Ecc))
 print_out('CCSD     energy: {:<5.10f}\n'.format(ccsd))
-print_out('BCCD     energy: {:<5.10f}\n'.format(bccd))

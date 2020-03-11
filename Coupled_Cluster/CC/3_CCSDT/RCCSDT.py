@@ -151,9 +151,9 @@ class RCCSDT:
         ###
 
         newerT2 += 2*np.einsum('eima,mjeb->ijab', tvWeima, self.T2, optimize='optimal')
-        newerT2 += -np.einsum('eima,mjbe->ijab', tvWeima, self.T2, optimize='optimal')
+        newerT2 += -np.einsum('eima,jmeb->ijab', tvWeima, self.T2, optimize='optimal')
         newerT2 += -np.einsum('iema,mjeb->ijab', tvWiema, self.T2, optimize='optimal')
-        newerT2 += 0.5*np.einsum('iema,mjbe->ijab', tvWiema, self.T2, optimize='optimal')
+        newerT2 += 0.5*np.einsum('iema,jmeb->ijab', tvWiema, self.T2, optimize='optimal')
 
         X = np.einsum('iema,jmeb->ijab', tvWiema, self.T2, optimize='optimal')
         newerT2 -= 0.5*X + X.transpose(0,1,3,2)
