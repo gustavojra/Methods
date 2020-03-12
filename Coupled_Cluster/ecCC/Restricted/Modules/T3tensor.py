@@ -55,9 +55,17 @@ class T3tensor:
             return 0
 
 
+    def contract(self, string, *argv):
+        
+        # First lets code something that will work for a T1
+        
+        # First string must be for T3
+        # Process string
+        string = string.replace('->', '')
+        s = string.split(',')
+        i,j,k,a,b,c = s[0]
+        ext = s[-1]
 
-
-x = T3tensor(2,4)
-x[1,1,0,3,2,1] = 7
-print(x[1,1,0,1,2,3])
-print(x[0,1,1,1,2,3])
+        # If the guide indices are not external indices
+        if i not in ext and a not in ext:
+            out = np.zeros()
