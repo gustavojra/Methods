@@ -1,0 +1,32 @@
+import sys
+sys.path.append('../../../3_CCSDT')
+sys.path.append('../../../2_CCSD')
+from RCCSDT import RCCSDT
+from RCCSD import RCCSD
+
+molecule mol {
+  0 1
+  O
+  H 1 R
+  H 1 R 2 A
+  R = 1.0
+  A = 104.5
+  symmetry c1
+}
+
+
+set {
+    BASIS         cc-pvdz
+    REFERENCE     RHF
+    SCF_TYPE      PK
+    E_CONVERGENCE 12
+    R_CONVERGENCE 12
+}
+
+ehf, wfn = energy('scf', return_wfn=True)
+e = energy('ccsd')
+
+X = RCCSDT(wfn, E_CONV=12, CC_CONV = 12, CC_MAXITER=100)
+
+print(e)
+

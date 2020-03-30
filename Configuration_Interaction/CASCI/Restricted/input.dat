@@ -1,7 +1,6 @@
 import sys
 sys.path.append('.')
 from CASCI import CASCI
-from CISD import CISD
 
 molecule mol {
     0 1
@@ -26,7 +25,4 @@ set {
 
 fci = energy('detci')
 
-CISD()
-
-print('FCI', fci)
-
+X = CASCI('full')
